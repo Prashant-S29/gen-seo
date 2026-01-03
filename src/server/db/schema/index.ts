@@ -1,6 +1,16 @@
 import { account, session, verification } from "./db.schema.auth";
 import { user } from "./db.schema.user";
-import { analysisSessions } from "./db.schema.analysis";
+import {
+  analysisSessions,
+  analysisSessionsRelations,
+} from "./db.schema.analysis";
+import {
+  prompts,
+  responses,
+  promptsRelations,
+  responsesRelations,
+} from "./db.schema.prompts";
+import { mentions, mentionsRelations } from "./db.schema.mentions";
 
 export const schema = {
   user,
@@ -8,4 +18,11 @@ export const schema = {
   session,
   verification,
   analysisSessions,
+  prompts,
+  responses,
+  mentions,
+  analysisSessionsRelations,
+  promptsRelations,
+  responsesRelations,
+  mentionsRelations,
 };

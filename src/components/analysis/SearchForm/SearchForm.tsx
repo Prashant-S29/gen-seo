@@ -53,7 +53,7 @@ export const SearchForm: React.FC = () => {
 
   const createAnalysis = api.analysis.create.useMutation({
     onSuccess: (data) => {
-      router.push(`dashboard/processing/${data.sessionId}`);
+      router.push(`processing/${data.sessionId}`);
     },
     onError: (error) => {
       console.error("Failed to create analysis:", error);

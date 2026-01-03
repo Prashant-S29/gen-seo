@@ -1,5 +1,7 @@
 CREATE TYPE "public"."analysis_method" AS ENUM('api_only', 'crawling_only', 'both');--> statement-breakpoint
 CREATE TYPE "public"."session_status" AS ENUM('pending', 'processing', 'completed', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."sentiment" AS ENUM('positive', 'neutral', 'negative');--> statement-breakpoint
+CREATE TYPE "public"."prompt_type" AS ENUM('recommendation', 'comparison', 'feature', 'price', 'use_case');--> statement-breakpoint
 CREATE TABLE "analysis_sessions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -52,6 +54,35 @@ CREATE TABLE "verification" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "mentions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"response_id" uuid NOT NULL,
+	"brand_name" text NOT NULL,
+	"position" integer NOT NULL,
+	"context_snippet" text,
+	"sentiment" "sentiment" DEFAULT 'neutral',
+	"is_recommended" boolean DEFAULT false,
+	"is_cited" boolean DEFAULT false
+);
+--> statement-breakpoint
+CREATE TABLE "prompts" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"session_id" uuid NOT NULL,
+	"prompt_text" text NOT NULL,
+	"prompt_type" "prompt_type" DEFAULT 'recommendation',
+	"executed_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "responses" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"prompt_id" uuid NOT NULL,
+	"platform" text NOT NULL,
+	"model" text NOT NULL,
+	"response_text" text NOT NULL,
+	"execution_time_ms" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "user" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
@@ -65,4 +96,7 @@ CREATE TABLE "user" (
 --> statement-breakpoint
 ALTER TABLE "analysis_sessions" ADD CONSTRAINT "analysis_sessions_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "mentions" ADD CONSTRAINT "mentions_response_id_responses_id_fk" FOREIGN KEY ("response_id") REFERENCES "public"."responses"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "prompts" ADD CONSTRAINT "prompts_session_id_analysis_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."analysis_sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "responses" ADD CONSTRAINT "responses_prompt_id_prompts_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompts"("id") ON DELETE cascade ON UPDATE no action;

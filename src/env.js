@@ -20,6 +20,8 @@ export const env = createEnv({
       .default("development"),
 
     RESEND_API_KEY: z.string(),
+
+    GOOGLE_GENERATIVE_AI_API_KEY: z.string(),
   },
 
   client: {},
@@ -36,6 +38,8 @@ export const env = createEnv({
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
 
     RESEND_API_KEY: process.env.RESEND_API_KEY,
+
+    GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
