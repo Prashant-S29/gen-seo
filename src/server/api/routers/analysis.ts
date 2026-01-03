@@ -126,11 +126,10 @@ export const analysisRouter = createTRPCRouter({
       });
 
       promptsData.forEach((prompt) => {
-        prompt.responses.forEach((resp) => {
-          resp.mentions.forEach((mention) => {
-            if (brandMentionCounts[mention.brandName] !== undefined) {
-              brandMentionCounts[mention.brandName]++;
-            }
+        prompt.responses?.forEach((resp) => {
+          resp.mentions?.forEach((mention) => {
+            brandMentionCounts[mention.brandName] =
+              (brandMentionCounts[mention.brandName] ?? 0) + 1;
           });
         });
       });

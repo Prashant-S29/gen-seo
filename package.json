@@ -1,11 +1,11 @@
 {
-  "name": "t3-template",
+  "name": "gen-seo",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "next build",
-    "ready": "eslint && tsc --noEmit && prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache && next build",
+    "ready": "pnpm format:write && eslint && tsc --noEmit && prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache && next build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

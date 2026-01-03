@@ -23,7 +23,7 @@ export const sendWelcomeEmail = async (
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: params.email,
-      subject: "Welcome to t3-template!",
+      subject: "Welcome to gen-seo!",
       html,
       text,
     });

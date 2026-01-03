@@ -1,4 +1,4 @@
-# t3-template
+# gen-seo
 
 Built on top of create-t3-app
 
