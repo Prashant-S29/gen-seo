@@ -1,11 +1,16 @@
 import { db } from "~/server/db";
 import { analysisSessions } from "~/server/db/schema/db.schema.analysis";
 import { prompts, responses } from "~/server/db/schema/db.schema.prompts";
-import { mentions } from "~/server/db/schema/db.schema.mentions";
+import { mentions, citations } from "~/server/db/schema/db.schema.mentions";
 import { eq } from "drizzle-orm";
 import { generatePrompts } from "./prompt-generation";
 import { executePromptsAcrossProviders } from "./ai-query";
-import { extractBrandMentions, analyzeSentiment } from "./response-parsing";
+import {
+  extractBrandMentions,
+  analyzeSentiment,
+  detectCitations,
+  isBrandCited,
+} from "./response-parsing";
 import { ANALYSIS_CONFIG } from "~/lib/constants";
 
 interface AnalysisConfig {
@@ -102,6 +107,26 @@ export const processAnalysisSession = async (
         const storedResponse = responseRecord[0];
         if (!storedResponse) continue;
 
+        // Extract citations FIRST
+        const extractedCitations = detectCitations(aiResponse.responseText);
+
+        // Store citations
+        if (extractedCitations.length > 0) {
+          await db.insert(citations).values(
+            extractedCitations.map((citation) => ({
+              responseId: storedResponse.id,
+              url: citation.url,
+              domain: citation.domain,
+              title: citation.title,
+              citationType: citation.citationType,
+            })),
+          );
+
+          console.log(
+            `Found ${extractedCitations.length} citations for response ${storedResponse.id}`,
+          );
+        }
+
         // Extract brand mentions
         const brandMentions = extractBrandMentions(
           aiResponse.responseText,
@@ -118,7 +143,7 @@ export const processAnalysisSession = async (
               contextSnippet: mention.contextSnippet,
               sentiment: analyzeSentiment(mention.contextSnippet),
               isRecommended: mention.isRecommended,
-              isCited: false,
+              isCited: isBrandCited(extractedCitations, mention.brandName), // Check if brand is cited
             })),
           );
         }

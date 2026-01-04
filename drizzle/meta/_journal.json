@@ -15,6 +15,13 @@
       "when": 1767449744257,
       "tag": "0001_add-providerid-and-promptcount-to-analysisSessions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1767526762178,
+      "tag": "0002_citation_added",
+      "breakpoints": true
     }
   ]
 }

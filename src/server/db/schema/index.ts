@@ -10,7 +10,12 @@ import {
   promptsRelations,
   responsesRelations,
 } from "./db.schema.prompts";
-import { mentions, mentionsRelations } from "./db.schema.mentions";
+import {
+  mentions,
+  citations,
+  mentionsRelations,
+  citationsRelations,
+} from "./db.schema.mentions";
 
 export const schema = {
   user,
@@ -21,8 +26,10 @@ export const schema = {
   prompts,
   responses,
   mentions,
+  citations,
   analysisSessionsRelations,
   promptsRelations,
   responsesRelations,
   mentionsRelations,
+  citationsRelations, // NEW
 };

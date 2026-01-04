@@ -2,7 +2,14 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  XCircle,
+  TrendingUp,
+  Link2,
+  Award,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
@@ -84,7 +91,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
       </div>
 
       {/* Overview Metrics */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
@@ -101,6 +108,25 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
             <p className="text-muted-foreground mt-2 text-xs">
               Mentioned in {results.metrics.primaryBrandMentions} of{" "}
               {results.metrics.totalPrompts} prompts
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-muted-foreground text-sm font-medium">
+              Citation Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-blue-500" />
+              <span className="text-3xl font-bold">
+                {results.metrics.citationRate}%
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-2 text-xs">
+              {results.metrics.primaryBrandCitations} citations found
             </p>
           </CardContent>
         </Card>
@@ -140,13 +166,15 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
-              Platform
+              Providers
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">Gemini</div>
+            <div className="text-3xl font-bold">
+              {Object.keys(results.metrics.responsesByPlatform).length}
+            </div>
             <p className="text-muted-foreground mt-2 text-xs">
-              gemini-1.5-flash
+              AI platforms tested
             </p>
           </CardContent>
         </Card>
@@ -176,7 +204,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
                             : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    {index + 1}
+                    {index === 0 ? <Award className="h-4 w-4" /> : index + 1}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -187,9 +215,19 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
                         </span>
                       )}
                     </div>
-                    <p className="text-muted-foreground text-sm">
-                      {entry.mentions} mention{entry.mentions !== 1 ? "s" : ""}
-                    </p>
+                    <div className="text-muted-foreground flex gap-3 text-sm">
+                      <span>
+                        {entry.mentions} mention
+                        {entry.mentions !== 1 ? "s" : ""}
+                      </span>
+                      <span>•</span>
+                      <span>
+                        {entry.citations} citation
+                        {entry.citations !== 1 ? "s" : ""}
+                      </span>
+                      <span>•</span>
+                      <span>{entry.citationRate}% citation rate</span>
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -203,6 +241,38 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Top Cited Domains */}
+      {results.topCitedDomains.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Cited Domains</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {results.topCitedDomains.map((domain, index) => (
+                <div
+                  key={domain.domain}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="bg-muted flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium">
+                      {index + 1}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Link2 className="text-muted-foreground h-4 w-4" />
+                      <span className="font-medium">{domain.domain}</span>
+                    </div>
+                  </div>
+                  <span className="text-muted-foreground text-sm">
+                    {domain.count} citation{domain.count !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Prompts List */}
       <Card>
@@ -226,7 +296,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
                       )}
                       <p className="font-medium">{prompt.text}</p>
                     </div>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       <span className="bg-muted rounded-full px-2 py-0.5 text-xs">
                         {prompt.type}
                       </span>
@@ -242,6 +312,12 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
                             ? "s"
                             : ""}{" "}
                           mentioned
+                        </span>
+                      )}
+                      {prompt.citationCount > 0 && (
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
+                          {prompt.citationCount} citation
+                          {prompt.citationCount !== 1 ? "s" : ""}
                         </span>
                       )}
                     </div>

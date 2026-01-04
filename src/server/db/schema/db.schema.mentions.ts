@@ -28,6 +28,17 @@ export const mentions = pgTable("mentions", {
   isCited: boolean("is_cited").default(false),
 });
 
+export const citations = pgTable("citations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  responseId: uuid("response_id")
+    .references(() => responses.id, { onDelete: "cascade" })
+    .notNull(),
+  url: text("url").notNull(),
+  domain: text("domain").notNull(),
+  title: text("title"),
+  citationType: text("citation_type").notNull(), // 'inline', 'footnote', 'markdown'
+});
+
 // Define relations
 export const mentionsRelations = relations(mentions, ({ one }) => ({
   response: one(responses, {
@@ -36,5 +47,14 @@ export const mentionsRelations = relations(mentions, ({ one }) => ({
   }),
 }));
 
+export const citationsRelations = relations(citations, ({ one }) => ({
+  response: one(responses, {
+    fields: [citations.responseId],
+    references: [responses.id],
+  }),
+}));
+
 export type Mention = typeof mentions.$inferSelect;
 export type NewMention = typeof mentions.$inferInsert;
+export type Citation = typeof citations.$inferSelect;
+export type NewCitation = typeof citations.$inferInsert;

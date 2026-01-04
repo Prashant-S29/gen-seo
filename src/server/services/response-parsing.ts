@@ -107,3 +107,122 @@ export const analyzeSentiment = (
   if (negativeCount > positiveCount) return "negative";
   return "neutral";
 };
+
+export interface Citation {
+  url: string;
+  domain: string;
+  title?: string;
+  citationType: "inline" | "footnote" | "markdown";
+}
+
+/**
+ * Extract domain from URL
+ */
+const extractDomain = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace("www.", "");
+  } catch {
+    return "unknown";
+  }
+};
+
+/**
+ * Detect and extract citations from AI response
+ * Supports: plain URLs, markdown links, footnote-style references
+ */
+export const detectCitations = (responseText: string): Citation[] => {
+  const citations: Citation[] = [];
+  const seenUrls = new Set<string>();
+
+  // 1. Extract markdown links [text](url)
+  const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g;
+  let match;
+
+  while ((match = markdownLinkRegex.exec(responseText)) !== null) {
+    const title = match[1];
+    const url = match[2];
+
+    if (url && !seenUrls.has(url)) {
+      seenUrls.add(url);
+      citations.push({
+        url,
+        domain: extractDomain(url),
+        title,
+        citationType: "markdown",
+      });
+    }
+  }
+
+  // 2. Extract plain URLs (http/https)
+  const plainUrlRegex = /(?<!\[)\b(https?:\/\/[^\s\)\]]+)/g;
+
+  while ((match = plainUrlRegex.exec(responseText)) !== null) {
+    const url = match[1];
+
+    if (url && !seenUrls.has(url)) {
+      seenUrls.add(url);
+      citations.push({
+        url,
+        domain: extractDomain(url),
+        citationType: "inline",
+      });
+    }
+  }
+
+  // 3. Extract footnote-style references [1], [2], etc.
+  // Look for patterns like [1]: http://... or [1] http://...
+  const footnoteRegex = /\[(\d+)\]:?\s*(https?:\/\/[^\s]+)/g;
+
+  while ((match = footnoteRegex.exec(responseText)) !== null) {
+    const url = match[2];
+
+    if (url && !seenUrls.has(url)) {
+      seenUrls.add(url);
+      citations.push({
+        url,
+        domain: extractDomain(url),
+        citationType: "footnote",
+      });
+    }
+  }
+
+  return citations;
+};
+
+/**
+ * Get top cited domains from multiple citations
+ */
+export const getTopCitedDomains = (
+  citations: Citation[],
+): Record<string, number> => {
+  const domainCounts: Record<string, number> = {};
+
+  citations.forEach((citation) => {
+    domainCounts[citation.domain] = (domainCounts[citation.domain] || 0) + 1;
+  });
+
+  return domainCounts;
+};
+
+/**
+ * Check if a specific brand is cited in any citation
+ */
+export const isBrandCited = (
+  citations: Citation[],
+  brandName: string,
+): boolean => {
+  const lowerBrand = brandName.toLowerCase();
+
+  return citations.some((citation) => {
+    const lowerUrl = citation.url.toLowerCase();
+    const lowerDomain = citation.domain.toLowerCase();
+    const lowerTitle = citation.title?.toLowerCase() || "";
+
+    return (
+      lowerUrl.includes(lowerBrand) ||
+      lowerDomain.includes(lowerBrand) ||
+      lowerTitle.includes(lowerBrand)
+    );
+  });
+};

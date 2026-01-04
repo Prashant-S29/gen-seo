@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { analysisSessions } from "~/server/db/schema/db.schema.analysis";
-import { prompts, responses } from "~/server/db/schema/db.schema.prompts";
-import { mentions } from "~/server/db/schema/db.schema.mentions";
+import { prompts } from "~/server/db/schema/db.schema.prompts";
 import { searchFormSchema } from "~/zodSchema/analysis";
 import { processAnalysisSession } from "~/server/services/session-orchestration";
 import { eq, and } from "drizzle-orm";
@@ -53,7 +52,7 @@ export const analysisRouter = createTRPCRouter({
 
   // Get session by ID
   getSession: protectedProcedure
-    .input(z.object({ sessionId: z.uuid() }))
+    .input(z.object({ sessionId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       const session = await ctx.db.query.analysisSessions.findFirst({
         where: (sessions, { eq, and }) =>
@@ -72,7 +71,7 @@ export const analysisRouter = createTRPCRouter({
 
   // Get complete analysis results
   getResults: protectedProcedure
-    .input(z.object({ sessionId: z.uuid() }))
+    .input(z.object({ sessionId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       // Get session
       const session = await ctx.db.query.analysisSessions.findFirst({
@@ -86,13 +85,14 @@ export const analysisRouter = createTRPCRouter({
         throw new Error("Session not found");
       }
 
-      // Get all prompts with responses and mentions
+      // Get all prompts with responses, mentions, and citations
       const promptsData = await ctx.db.query.prompts.findMany({
         where: eq(prompts.sessionId, input.sessionId),
         with: {
           responses: {
             with: {
               mentions: true,
+              citations: true,
             },
           },
         },
@@ -100,11 +100,24 @@ export const analysisRouter = createTRPCRouter({
 
       // Calculate metrics
       const totalPrompts = promptsData.length;
+
+      // Total mentions across all responses
       const totalMentions = promptsData.reduce(
         (acc, prompt) =>
           acc +
           prompt.responses.reduce(
             (respAcc, resp) => respAcc + resp.mentions.length,
+            0,
+          ),
+        0,
+      );
+
+      // Total citations across all responses
+      const totalCitations = promptsData.reduce(
+        (acc, prompt) =>
+          acc +
+          prompt.responses.reduce(
+            (respAcc, resp) => respAcc + resp.citations.length,
             0,
           ),
         0,
@@ -121,23 +134,52 @@ export const analysisRouter = createTRPCRouter({
         ),
       ).length;
 
+      // Count how many times primary brand was cited
+      const primaryBrandCitations = promptsData.reduce(
+        (acc, prompt) =>
+          acc +
+          prompt.responses.reduce((respAcc, resp) => {
+            const cited = resp.mentions.some(
+              (mention) =>
+                mention.brandName.toLowerCase() ===
+                  session.primaryBrand.toLowerCase() && mention.isCited,
+            );
+            return respAcc + (cited ? 1 : 0);
+          }, 0),
+        0,
+      );
+
       // Calculate visibility score for primary brand
       const visibilityScore =
         totalPrompts > 0
           ? Math.round((primaryBrandMentions / totalPrompts) * 100)
           : 0;
 
+      // Calculate citation rate for primary brand
+      const citationRate =
+        primaryBrandMentions > 0
+          ? Math.round((primaryBrandCitations / primaryBrandMentions) * 100)
+          : 0;
+
       // Count mentions per brand across all providers
       const brandMentionCounts: Record<string, number> = {};
+      const brandCitationCounts: Record<string, number> = {};
+
       session.brands.forEach((brand) => {
         brandMentionCounts[brand] = 0;
+        brandCitationCounts[brand] = 0;
       });
 
       promptsData.forEach((prompt) => {
         prompt.responses.forEach((resp) => {
           resp.mentions.forEach((mention) => {
             if (brandMentionCounts[mention.brandName] !== undefined) {
-              brandMentionCounts[mention.brandName]++;
+              brandMentionCounts[mention.brandName] =
+                (brandMentionCounts[mention.brandName] ?? 0) + 1;
+              if (mention.isCited) {
+                brandCitationCounts[mention.brandName] =
+                  (brandCitationCounts[mention.brandName] ?? 0) + 1;
+              }
             }
           });
         });
@@ -148,8 +190,13 @@ export const analysisRouter = createTRPCRouter({
         .map(([brand, count]) => ({
           brand,
           mentions: count,
+          citations: brandCitationCounts[brand] || 0,
           visibilityScore:
             totalPrompts > 0 ? Math.round((count / totalPrompts) * 100) : 0,
+          citationRate:
+            count > 0
+              ? Math.round(((brandCitationCounts[brand] || 0) / count) * 100)
+              : 0,
         }))
         .sort((a, b) => b.mentions - a.mentions);
 
@@ -161,6 +208,22 @@ export const analysisRouter = createTRPCRouter({
             (responsesByPlatform[resp.platform] || 0) + 1;
         });
       });
+
+      // Get top cited domains
+      const domainCounts: Record<string, number> = {};
+      promptsData.forEach((prompt) => {
+        prompt.responses.forEach((resp) => {
+          resp.citations.forEach((citation) => {
+            domainCounts[citation.domain] =
+              (domainCounts[citation.domain] || 0) + 1;
+          });
+        });
+      });
+
+      const topCitedDomains = Object.entries(domainCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([domain, count]) => ({ domain, count }));
 
       // Format prompts for display
       const promptsList = promptsData.map((prompt) => {
@@ -181,6 +244,11 @@ export const analysisRouter = createTRPCRouter({
           )
           .map((m) => m.brandName);
 
+        const citationCount = prompt.responses.reduce(
+          (acc, resp) => acc + resp.citations.length,
+          0,
+        );
+
         return {
           id: prompt.id,
           text: prompt.promptText,
@@ -188,6 +256,7 @@ export const analysisRouter = createTRPCRouter({
           primaryBrandMentioned,
           competitorsMentioned: [...new Set(competitorsMentioned)],
           responseCount: prompt.responses.length,
+          citationCount,
         };
       });
 
@@ -196,11 +265,15 @@ export const analysisRouter = createTRPCRouter({
         metrics: {
           totalPrompts,
           totalMentions,
+          totalCitations,
           visibilityScore,
           primaryBrandMentions,
+          primaryBrandCitations,
+          citationRate,
           responsesByPlatform,
         },
         leaderboard,
+        topCitedDomains,
         prompts: promptsList,
       };
     }),

@@ -1,7 +1,7 @@
 import { pgTable, uuid, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { analysisSessions } from "./db.schema.analysis";
-import { mentions } from "./db.schema.mentions";
+import { mentions, citations } from "./db.schema.mentions";
 
 export const promptTypeEnum = pgEnum("prompt_type", [
   "recommendation",
@@ -48,6 +48,7 @@ export const responsesRelations = relations(responses, ({ one, many }) => ({
     references: [prompts.id],
   }),
   mentions: many(mentions),
+  citations: many(citations),
 }));
 
 export type Prompt = typeof prompts.$inferSelect;

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, X } from "lucide-react";
 
@@ -56,6 +56,11 @@ export const SearchForm: React.FC = () => {
         enabledProviders.length > 0 ? [enabledProviders[0]!.id] : [],
       promptCount: ANALYSIS_CONFIG.prompts.default,
     },
+  });
+
+  const selectedProviders = useWatch({
+    control: form.control,
+    name: "selectedProviders",
   });
 
   const createAnalysis = api.analysis.create.useMutation({
@@ -311,8 +316,7 @@ export const SearchForm: React.FC = () => {
                       />
                       <span className="text-muted-foreground text-sm">
                         Total queries:{" "}
-                        {field.value *
-                          (form.watch("selectedProviders")?.length || 1)}
+                        {field.value * (selectedProviders?.length || 1)}
                       </span>
                     </div>
                   </FormControl>
