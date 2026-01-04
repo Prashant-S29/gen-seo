@@ -277,4 +277,62 @@ export const analysisRouter = createTRPCRouter({
         prompts: promptsList,
       };
     }),
+
+  // list sessions
+  listSessions: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(20),
+        cursor: z.string().uuid().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const sessions = await ctx.db.query.analysisSessions.findMany({
+        where: eq(analysisSessions.userId, ctx.session.user.id),
+        orderBy: (sessions, { desc }) => [desc(sessions.createdAt)],
+        limit: input.limit + 1,
+        ...(input.cursor && {
+          where: (sessions, { lt, and, eq }) =>
+            and(
+              eq(sessions.userId, ctx.session.user.id),
+              lt(sessions.id, input.cursor!),
+            ),
+        }),
+      });
+
+      let nextCursor: string | undefined = undefined;
+      if (sessions.length > input.limit) {
+        const nextItem = sessions.pop();
+        nextCursor = nextItem?.id;
+      }
+
+      return {
+        sessions,
+        nextCursor,
+      };
+    }),
+
+  // delete a session
+  deleteSession: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify ownership
+      const session = await ctx.db.query.analysisSessions.findFirst({
+        where: and(
+          eq(analysisSessions.id, input.sessionId),
+          eq(analysisSessions.userId, ctx.session.user.id),
+        ),
+      });
+
+      if (!session) {
+        throw new Error("Session not found or unauthorized");
+      }
+
+      // Delete session (cascades to prompts, responses, mentions, citations)
+      await ctx.db
+        .delete(analysisSessions)
+        .where(eq(analysisSessions.id, input.sessionId));
+
+      return { success: true };
+    }),
 });

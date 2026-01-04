@@ -9,10 +9,17 @@ import {
   TrendingUp,
   Link2,
   Award,
+  Download,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
+import {
+  VisibilityChart,
+  MentionsPieChart,
+  CitationRateChart,
+} from "~/components/analysis/Charts";
+import { exportToCSV } from "~/lib/utils";
 
 interface ResultsPageProps {
   sessionId: string;
@@ -28,6 +35,11 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
   } = api.analysis.getResults.useQuery({
     sessionId,
   });
+
+  const handleExport = () => {
+    if (!results) return;
+    exportToCSV(results);
+  };
 
   if (isLoading) {
     return (
@@ -85,9 +97,15 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
             {results.session.productName} • {results.session.category}
           </p>
         </div>
-        <Button onClick={() => router.push("/dashboard/search")}>
-          New Analysis
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button onClick={() => router.push("/dashboard/search")}>
+            New Analysis
+          </Button>
+        </div>
       </div>
 
       {/* Overview Metrics */}
@@ -179,6 +197,18 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Charts Section */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <VisibilityChart
+          data={results.leaderboard}
+          primaryBrand={results.session.primaryBrand}
+        />
+        <MentionsPieChart data={results.leaderboard} />
+      </div>
+
+      {/* Citation Rate Chart - Full Width */}
+      <CitationRateChart data={results.leaderboard} />
 
       {/* Competitive Leaderboard */}
       <Card>
