@@ -6,8 +6,8 @@ interface ContainerProps {
 
 export const Container: React.FC<ContainerProps> = ({ children }) => {
   return (
-    <div className="flex min-h-screen w-full justify-center">
-      <div className="relative flex h-screen w-20 flex-col items-center space-y-3 overflow-hidden border-x">
+    <div className="relative flex min-h-screen w-full justify-center">
+      <div className="sticky top-0 z-10 flex h-screen w-20 flex-col items-center space-y-3 overflow-hidden border-x">
         {Array.from({ length: 200 }).map((_, index) => (
           <div
             key={index}
@@ -16,7 +16,7 @@ export const Container: React.FC<ContainerProps> = ({ children }) => {
         ))}
       </div>
       <div className="w-full max-w-5xl">{children}</div>
-      <div className="relative flex h-screen w-20 flex-col items-center space-y-3 overflow-hidden border-x">
+      <div className="sticky top-0 z-10 flex h-screen w-20 flex-col items-center space-y-3 overflow-hidden border-x">
         {Array.from({ length: 200 }).map((_, index) => (
           <div
             key={index}

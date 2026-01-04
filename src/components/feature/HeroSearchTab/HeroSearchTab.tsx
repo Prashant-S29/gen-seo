@@ -4,6 +4,11 @@ import { Button } from "~/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Globe, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 export const HeroSearchTab: React.FC = () => {
   const [showConfigsTab, setShowConfigsTab] = useState(false);
@@ -29,12 +34,28 @@ export const HeroSearchTab: React.FC = () => {
         <Tabs defaultValue="api_only">
           <TabsList>
             <TabsTrigger value="api_only">API Search Only</TabsTrigger>
-            <TabsTrigger value="crawling_only" disabled>
-              Web Crawling Only
-            </TabsTrigger>
-            <TabsTrigger value="both" disabled>
-              Both
-            </TabsTrigger>
+
+            <Tooltip>
+              <TooltipTrigger disabled>
+                <span className="text-muted-foreground inline-flex h-8 cursor-not-allowed items-center px-2 text-sm font-semibold opacity-50">
+                  Web Crawling Only
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Coming Soon</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger disabled>
+                <span className="text-muted-foreground inline-flex h-8 cursor-not-allowed items-center px-2 text-sm font-semibold opacity-50">
+                  Both
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Coming Soon</p>
+              </TooltipContent>
+            </Tooltip>
           </TabsList>
         </Tabs>
 

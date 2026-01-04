@@ -10,6 +10,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 
 import { authClient } from "~/server/better-auth/client";
 import { ThemeToggler } from "~/components/common";
+import { Badge } from "~/components/ui/badge";
 
 const navLinks = [
   {
@@ -34,6 +35,7 @@ export const Header: React.FC = () => {
       <div className="relative flex w-full max-w-5xl items-center justify-between px-8 py-6">
         <h1>
           <Link href="/">GenSEO</Link>
+          <Badge variant="outline">Beta Version</Badge>
         </h1>
 
         <nav className="absolute left-1/2 flex -translate-x-1/2 gap-5">
