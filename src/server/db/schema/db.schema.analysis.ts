@@ -35,6 +35,9 @@ export const analysisSessions = pgTable("analysis_sessions", {
   brands: text("brands").array().notNull(),
   category: varchar("category", { length: 255 }).notNull(),
 
+  selectedProviders: text("selected_providers").array().notNull().default([]),
+  promptCount: integer("prompt_count").default(10).notNull(),
+
   analysisMethod: analysisMethodEnum("analysis_method")
     .default("api_only")
     .notNull(),

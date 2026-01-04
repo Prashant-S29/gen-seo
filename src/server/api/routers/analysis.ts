@@ -1,16 +1,20 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { analysisSessions } from "~/server/db/schema/db.schema.analysis";
+import { prompts, responses } from "~/server/db/schema/db.schema.prompts";
+import { mentions } from "~/server/db/schema/db.schema.mentions";
 import { searchFormSchema } from "~/zodSchema/analysis";
 import { processAnalysisSession } from "~/server/services/session-orchestration";
-import { and, eq } from "drizzle-orm";
-import { prompts } from "~/server/db/schema/db.schema.prompts";
+import { eq, and } from "drizzle-orm";
 
 export const analysisRouter = createTRPCRouter({
   // Create new analysis session
   create: protectedProcedure
     .input(searchFormSchema)
     .mutation(async ({ ctx, input }) => {
+      // Calculate total prompts (prompts × providers)
+      const totalPrompts = input.promptCount * input.selectedProviders.length;
+
       // Create session
       const session = await ctx.db
         .insert(analysisSessions)
@@ -20,8 +24,10 @@ export const analysisRouter = createTRPCRouter({
           primaryBrand: input.primaryBrand,
           brands: [input.primaryBrand, ...input.competitors],
           category: input.category,
+          selectedProviders: input.selectedProviders,
+          promptCount: input.promptCount,
           status: "pending",
-          totalPrompts: 5, // We'll generate 5 prompts for POC
+          totalPrompts: totalPrompts,
         })
         .returning();
 
@@ -33,6 +39,8 @@ export const analysisRouter = createTRPCRouter({
         category: input.category,
         brands: [input.primaryBrand, ...input.competitors],
         productName: input.productName,
+        selectedProviders: input.selectedProviders,
+        promptCount: input.promptCount,
       }).catch((error) => {
         console.error(`Failed to process session ${sessionId}:`, error);
       });
@@ -102,7 +110,7 @@ export const analysisRouter = createTRPCRouter({
         0,
       );
 
-      // Count prompts where primary brand was mentioned
+      // Count prompts where primary brand was mentioned (across any provider)
       const primaryBrandMentions = promptsData.filter((prompt) =>
         prompt.responses.some((resp) =>
           resp.mentions.some(
@@ -119,17 +127,18 @@ export const analysisRouter = createTRPCRouter({
           ? Math.round((primaryBrandMentions / totalPrompts) * 100)
           : 0;
 
-      // Count mentions per brand
+      // Count mentions per brand across all providers
       const brandMentionCounts: Record<string, number> = {};
       session.brands.forEach((brand) => {
         brandMentionCounts[brand] = 0;
       });
 
       promptsData.forEach((prompt) => {
-        prompt.responses?.forEach((resp) => {
-          resp.mentions?.forEach((mention) => {
-            brandMentionCounts[mention.brandName] =
-              (brandMentionCounts[mention.brandName] ?? 0) + 1;
+        prompt.responses.forEach((resp) => {
+          resp.mentions.forEach((mention) => {
+            if (brandMentionCounts[mention.brandName] !== undefined) {
+              brandMentionCounts[mention.brandName]++;
+            }
           });
         });
       });
@@ -143,6 +152,15 @@ export const analysisRouter = createTRPCRouter({
             totalPrompts > 0 ? Math.round((count / totalPrompts) * 100) : 0,
         }))
         .sort((a, b) => b.mentions - a.mentions);
+
+      // Group responses by platform for display
+      const responsesByPlatform: Record<string, number> = {};
+      promptsData.forEach((prompt) => {
+        prompt.responses.forEach((resp) => {
+          responsesByPlatform[resp.platform] =
+            (responsesByPlatform[resp.platform] || 0) + 1;
+        });
+      });
 
       // Format prompts for display
       const promptsList = promptsData.map((prompt) => {
@@ -180,6 +198,7 @@ export const analysisRouter = createTRPCRouter({
           totalMentions,
           visibilityScore,
           primaryBrandMentions,
+          responsesByPlatform,
         },
         leaderboard,
         prompts: promptsList,

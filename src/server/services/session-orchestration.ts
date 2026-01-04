@@ -4,14 +4,17 @@ import { prompts, responses } from "~/server/db/schema/db.schema.prompts";
 import { mentions } from "~/server/db/schema/db.schema.mentions";
 import { eq } from "drizzle-orm";
 import { generatePrompts } from "./prompt-generation";
-import { executeBatchPrompts } from "./ai-query";
+import { executePromptsAcrossProviders } from "./ai-query";
 import { extractBrandMentions, analyzeSentiment } from "./response-parsing";
+import { ANALYSIS_CONFIG } from "~/lib/constants";
 
 interface AnalysisConfig {
   sessionId: string;
   category: string;
   brands: string[];
   productName: string;
+  selectedProviders: string[];
+  promptCount: number;
 }
 
 /**
@@ -32,7 +35,7 @@ export const processAnalysisSession = async (
     const promptTemplates = generatePrompts(
       config.category,
       config.productName,
-      5, // 5 prompts for POC
+      config.promptCount,
     );
 
     // 3. Store prompts in database
@@ -51,65 +54,89 @@ export const processAnalysisSession = async (
       `Generated ${promptRecords.length} prompts for session ${config.sessionId}`,
     );
 
-    // 4. Execute prompts with AI (sequential with rate limiting)
-    const aiResponses = await executeBatchPrompts(
-      promptRecords.map((p) => p.promptText),
+    // 4. Execute prompts across all selected providers in parallel
+    const promptTexts = promptRecords.map((p) => p.promptText);
+    const allProviderResults = await executePromptsAcrossProviders(
+      config.selectedProviders,
+      promptTexts,
+      ANALYSIS_CONFIG.rateLimit.delayBetweenRequests,
     );
 
-    console.log(`Received ${aiResponses.length} AI responses`);
+    console.log(
+      `Received responses from ${Object.keys(allProviderResults).length} providers`,
+    );
 
-    // 5. Process each response
-    for (let i = 0; i < promptRecords.length; i++) {
-      const promptRecord = promptRecords[i];
-      const aiResponse = aiResponses[i];
+    // 5. Process responses from all providers
+    let completedCount = 0;
+    const totalResponses =
+      promptRecords.length * config.selectedProviders.length;
 
-      if (!promptRecord || !aiResponse) continue;
+    for (
+      let promptIndex = 0;
+      promptIndex < promptRecords.length;
+      promptIndex++
+    ) {
+      const promptRecord = promptRecords[promptIndex];
+      if (!promptRecord) continue;
 
-      // Store AI response
-      const responseRecord = await db
-        .insert(responses)
-        .values({
-          promptId: promptRecord.id,
-          platform: aiResponse.platform,
-          model: aiResponse.model,
-          responseText: aiResponse.responseText,
-          executionTimeMs: new Date(aiResponse.executionTimeMs),
-        })
-        .returning();
+      // Process each provider's response for this prompt
+      for (const providerId of config.selectedProviders) {
+        const providerResults = allProviderResults[providerId];
+        if (!providerResults) continue;
 
-      const storedResponse = responseRecord[0];
-      if (!storedResponse) continue;
+        const aiResponse = providerResults[promptIndex];
+        if (!aiResponse) continue;
 
-      // Extract brand mentions
-      const brandMentions = extractBrandMentions(
-        aiResponse.responseText,
-        config.brands,
-      );
+        // Store AI response
+        const responseRecord = await db
+          .insert(responses)
+          .values({
+            promptId: promptRecord.id,
+            platform: aiResponse.platform,
+            model: aiResponse.model,
+            responseText: aiResponse.responseText,
+            executionTimeMs: new Date(aiResponse.executionTimeMs),
+          })
+          .returning();
 
-      // Store mentions
-      if (brandMentions.length > 0) {
-        await db.insert(mentions).values(
-          brandMentions.map((mention) => ({
-            responseId: storedResponse.id,
-            brandName: mention.brandName,
-            position: mention.position,
-            contextSnippet: mention.contextSnippet,
-            sentiment: analyzeSentiment(mention.contextSnippet),
-            isRecommended: mention.isRecommended,
-            isCited: false, // Will implement citation detection in later milestone
-          })),
+        const storedResponse = responseRecord[0];
+        if (!storedResponse) continue;
+
+        // Extract brand mentions
+        const brandMentions = extractBrandMentions(
+          aiResponse.responseText,
+          config.brands,
+        );
+
+        // Store mentions
+        if (brandMentions.length > 0) {
+          await db.insert(mentions).values(
+            brandMentions.map((mention) => ({
+              responseId: storedResponse.id,
+              brandName: mention.brandName,
+              position: mention.position,
+              contextSnippet: mention.contextSnippet,
+              sentiment: analyzeSentiment(mention.contextSnippet),
+              isRecommended: mention.isRecommended,
+              isCited: false,
+            })),
+          );
+        }
+
+        completedCount++;
+
+        // Update progress
+        await db
+          .update(analysisSessions)
+          .set({
+            completedPrompts: completedCount,
+          })
+          .where(eq(analysisSessions.id, config.sessionId));
+
+        console.log(
+          `Completed ${completedCount}/${totalResponses} (Prompt ${promptIndex + 1}/${promptRecords.length}, Provider: ${providerId})`,
         );
       }
-
-      // Update progress
-      await db
-        .update(analysisSessions)
-        .set({
-          completedPrompts: i + 1,
-        })
-        .where(eq(analysisSessions.id, config.sessionId));
-
-      console.log(`Completed prompt ${i + 1}/${promptRecords.length}`);
     }
 
     // 6. Mark session as completed

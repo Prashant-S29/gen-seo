@@ -24,7 +24,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "~/components/ui/form";
+import { getEnabledProviders, ANALYSIS_CONFIG } from "~/lib/constants";
 
 const CATEGORIES = [
   "CRM Software",
@@ -41,6 +43,8 @@ export const SearchForm: React.FC = () => {
   const router = useRouter();
   const [competitors, setCompetitors] = useState<string[]>(["", ""]);
 
+  const enabledProviders = getEnabledProviders();
+
   const form = useForm<SearchFormInput>({
     resolver: zodResolver(searchFormSchema),
     defaultValues: {
@@ -48,12 +52,15 @@ export const SearchForm: React.FC = () => {
       primaryBrand: "",
       competitors: ["", ""],
       category: "",
+      selectedProviders:
+        enabledProviders.length > 0 ? [enabledProviders[0]!.id] : [],
+      promptCount: ANALYSIS_CONFIG.prompts.default,
     },
   });
 
   const createAnalysis = api.analysis.create.useMutation({
     onSuccess: (data) => {
-      router.push(`processing/${data.sessionId}`);
+      router.push(`/dashboard/processing/${data.sessionId}`);
     },
     onError: (error) => {
       console.error("Failed to create analysis:", error);
@@ -61,7 +68,7 @@ export const SearchForm: React.FC = () => {
   });
 
   const handleAddCompetitor = () => {
-    if (competitors.length < 10) {
+    if (competitors.length < ANALYSIS_CONFIG.brands.max) {
       const newCompetitors = [...competitors, ""];
       setCompetitors(newCompetitors);
       form.setValue("competitors", newCompetitors);
@@ -69,7 +76,7 @@ export const SearchForm: React.FC = () => {
   };
 
   const handleRemoveCompetitor = (index: number) => {
-    if (competitors.length > 2) {
+    if (competitors.length > ANALYSIS_CONFIG.brands.min) {
       const newCompetitors = competitors.filter((_, i) => i !== index);
       setCompetitors(newCompetitors);
       form.setValue("competitors", newCompetitors);
@@ -86,9 +93,9 @@ export const SearchForm: React.FC = () => {
   const onSubmit = (data: SearchFormInput) => {
     const filteredCompetitors = data.competitors.filter((c) => c.trim() !== "");
 
-    if (filteredCompetitors.length < 2) {
+    if (filteredCompetitors.length < ANALYSIS_CONFIG.brands.min) {
       form.setError("competitors", {
-        message: "Please add at least 2 competitor brands",
+        message: `Please add at least ${ANALYSIS_CONFIG.brands.min} competitor brands`,
       });
       return;
     }
@@ -103,9 +110,7 @@ export const SearchForm: React.FC = () => {
     <Card>
       <CardHeader>
         <CardTitle>Start New Analysis</CardTitle>
-        <CardDescription>
-          Enter your product details and competitors to analyze AI visibility
-        </CardDescription>
+        <CardDescription>Configure your AI visibility analysis</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -168,13 +173,16 @@ export const SearchForm: React.FC = () => {
             {/* Competitors */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <FormLabel>Competitor Brands (min 2, max 10)</FormLabel>
+                <FormLabel>
+                  Competitor Brands (min {ANALYSIS_CONFIG.brands.min}, max{" "}
+                  {ANALYSIS_CONFIG.brands.max})
+                </FormLabel>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleAddCompetitor}
-                  disabled={competitors.length >= 10}
+                  disabled={competitors.length >= ANALYSIS_CONFIG.brands.max}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Add Competitor
@@ -191,7 +199,7 @@ export const SearchForm: React.FC = () => {
                         handleCompetitorChange(index, e.target.value)
                       }
                     />
-                    {competitors.length > 2 && (
+                    {competitors.length > ANALYSIS_CONFIG.brands.min && (
                       <Button
                         type="button"
                         variant="outline"
@@ -211,6 +219,107 @@ export const SearchForm: React.FC = () => {
                 </p>
               )}
             </div>
+
+            {/* AI Providers Selection */}
+            <FormField
+              control={form.control}
+              name="selectedProviders"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>AI Providers</FormLabel>
+                  <FormDescription>
+                    Select which AI platforms to analyze (more providers = more
+                    comprehensive results)
+                  </FormDescription>
+                  <div className="space-y-2">
+                    {enabledProviders.map((provider) => (
+                      <div
+                        key={provider.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <input
+                          type="checkbox"
+                          id={provider.id}
+                          checked={field.value?.includes(provider.id)}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            const currentValue = field.value || [];
+
+                            if (checked) {
+                              field.onChange([...currentValue, provider.id]);
+                            } else {
+                              field.onChange(
+                                currentValue.filter((id) => id !== provider.id),
+                              );
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <label
+                          htmlFor={provider.id}
+                          className="flex flex-1 items-center justify-between text-sm"
+                        >
+                          <div>
+                            <span className="font-medium">
+                              {provider.displayName}
+                            </span>
+                            <span className="text-muted-foreground ml-2">
+                              {provider.description}
+                            </span>
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs ${
+                              provider.category === "free"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}
+                          >
+                            {provider.category}
+                          </span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Prompt Count */}
+            <FormField
+              control={form.control}
+              name="promptCount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Number of Prompts</FormLabel>
+                  <FormDescription>
+                    How many search queries to test (min{" "}
+                    {ANALYSIS_CONFIG.prompts.min}, max{" "}
+                    {ANALYSIS_CONFIG.prompts.max})
+                  </FormDescription>
+                  <FormControl>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        min={ANALYSIS_CONFIG.prompts.min}
+                        max={ANALYSIS_CONFIG.prompts.max}
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value))
+                        }
+                        className="w-32"
+                      />
+                      <span className="text-muted-foreground text-sm">
+                        Total queries:{" "}
+                        {field.value *
+                          (form.watch("selectedProviders")?.length || 1)}
+                      </span>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Submit Button */}
             <div className="flex gap-3">

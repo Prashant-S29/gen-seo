@@ -1,0 +1,2 @@
+ALTER TABLE "analysis_sessions" ADD COLUMN "selected_providers" text[] DEFAULT '{}' NOT NULL;--> statement-breakpoint
+ALTER TABLE "analysis_sessions" ADD COLUMN "prompt_count" integer DEFAULT 10 NOT NULL;
