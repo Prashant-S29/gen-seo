@@ -83,7 +83,7 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="z-10 w-full max-w-sm">
       <CardHeader>
         <CardTitle>Login to your account</CardTitle>
         <CardDescription>

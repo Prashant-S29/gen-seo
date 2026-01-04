@@ -1,16 +1,8 @@
 import React from "react";
-import Link from "next/link";
+import { Hero } from "~/components/section/home";
 
 const Home: React.FC = () => {
-  return (
-    <main className="flex h-screen w-full flex-col items-center justify-center gap-2">
-      <p>gen-seo</p>
-
-      <Link href="/dashboard" className="underline underline-offset-2">
-        Go to Dashboard
-      </Link>
-    </main>
-  );
+  return <Hero />;
 };
 
 export default Home;
