@@ -2,6 +2,7 @@ import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
+import { perplexity } from "@ai-sdk/perplexity";
 import { getProviderById, type LLMProvider } from "~/lib/constants";
 
 export interface AIQueryResult {
@@ -23,6 +24,8 @@ const getModel = (provider: LLMProvider) => {
       return openai(provider.model);
     case "anthropic":
       return anthropic(provider.model);
+    case "perplexity":
+      return perplexity(provider.model);
     default:
       throw new Error(`Unsupported provider: ${provider.provider}`);
   }
@@ -52,7 +55,8 @@ export const queryAI = async (
 
     const { text } = await generateText({
       model,
-      prompt: prompt,
+      prompt: `${prompt} also provide the respected sources for citations`,
+      // prompt,
       temperature: provider.temperature,
       maxOutputTokens: provider.maxOutputTokens,
     });

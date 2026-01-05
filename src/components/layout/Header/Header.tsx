@@ -35,7 +35,7 @@ export const Header: React.FC = () => {
   const { data, isRefetching, isPending } = authClient.useSession();
 
   return (
-    <div className="fixed top-0 z-10 flex w-full justify-center">
+    <div className="fixed top-0 z-20 flex w-full justify-center">
       <div className="bg-background relative flex w-full max-w-5xl items-center justify-between border-b px-8 py-6">
         <h1 className="flex items-center gap-3">
           <Link href="/">GenSEO</Link>

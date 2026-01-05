@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { Input } from "~/components/ui/input";
 
 export const HeroSearchTab: React.FC = () => {
   const [showConfigsTab, setShowConfigsTab] = useState(false);
@@ -20,14 +21,33 @@ export const HeroSearchTab: React.FC = () => {
         <input
           type="text"
           className="mt-0.5 w-full border-none outline-none"
-          placeholder="https://example.com"
+          placeholder="https://example.com   [ coming soon ]"
+          disabled
         />
       </div>
 
       <div
         className={`w-full ${showConfigsTab ? "max-h-500" : "max-h-0"} overflow-hidden duration-300 ease-in-out`}
       >
-        <div className="border-b p-3"></div>
+        <div className="grid grid-cols-3 gap-3 border-b p-3">
+          {/* Product Name */}
+          <div>
+            <p className="text-muted-foreground text-sm">Product</p>
+            <Input readOnly value="Salesforce" className="mt-1" />
+          </div>
+
+          {/* Category */}
+          <div>
+            <p className="text-muted-foreground text-sm">Category</p>
+            <Input readOnly value="Salesforce" className="mt-1" />
+          </div>
+
+          {/* Competitors List */}
+          <div>
+            <p className="text-muted-foreground text-sm">Competitors List</p>
+            <Input readOnly value="Salesforce" className="mt-1" />
+          </div>
+        </div>
       </div>
 
       <div className="flex justify-between p-3">
@@ -64,6 +84,7 @@ export const HeroSearchTab: React.FC = () => {
           onClick={() => {
             setShowConfigsTab(!showConfigsTab);
           }}
+          disabled
         >
           <ArrowRight />
         </Button>

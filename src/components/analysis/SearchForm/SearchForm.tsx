@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Check } from "lucide-react";
 
 import { api } from "~/trpc/react";
 import { searchFormSchema, type SearchFormInput } from "~/zodSchema/analysis";
@@ -26,7 +26,15 @@ import {
   FormMessage,
   FormDescription,
 } from "~/components/ui/form";
-import { getEnabledProviders, ANALYSIS_CONFIG } from "~/lib/constants";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { LLM_PROVIDERS, ANALYSIS_CONFIG } from "~/lib/constants";
+import { cn } from "~/lib/utils";
 
 const CATEGORIES = [
   "CRM Software",
@@ -43,7 +51,8 @@ export const SearchForm: React.FC = () => {
   const router = useRouter();
   const [competitors, setCompetitors] = useState<string[]>(["", ""]);
 
-  const enabledProviders = getEnabledProviders();
+  // Get only enabled providers
+  const enabledProviders = LLM_PROVIDERS.filter((p) => p.isEnabled);
 
   const form = useForm<SearchFormInput>({
     resolver: zodResolver(searchFormSchema),
@@ -52,15 +61,9 @@ export const SearchForm: React.FC = () => {
       primaryBrand: "",
       competitors: ["", ""],
       category: "",
-      selectedProviders:
-        enabledProviders.length > 0 ? [enabledProviders[0]!.id] : [],
-      promptCount: ANALYSIS_CONFIG.prompts.default,
+      selectedProviders: ["gpt-4-turbo"], // Default to GPT-4 Turbo
+      promptCount: 5,
     },
-  });
-
-  const selectedProviders = useWatch({
-    control: form.control,
-    name: "selectedProviders",
   });
 
   const createAnalysis = api.analysis.create.useMutation({
@@ -98,10 +101,50 @@ export const SearchForm: React.FC = () => {
   const onSubmit = (data: SearchFormInput) => {
     const filteredCompetitors = data.competitors.filter((c) => c.trim() !== "");
 
+    // Validate product name
+    if (!data.productName?.trim()) {
+      form.setError("productName", {
+        message: "Product name is required",
+      });
+    }
+
+    // Validate brand name
+    if (!data.primaryBrand?.trim()) {
+      form.setError("primaryBrand", {
+        message: "Brand name is required",
+      });
+    }
+
+    // Validate category
+    if (!data.category?.trim()) {
+      form.setError("category", {
+        message: "Category is required",
+      });
+    }
+
+    // Validate competitors
     if (filteredCompetitors.length < ANALYSIS_CONFIG.brands.min) {
       form.setError("competitors", {
         message: `Please add at least ${ANALYSIS_CONFIG.brands.min} competitor brands`,
       });
+    }
+
+    // Validate providers
+    if (!data.selectedProviders || data.selectedProviders.length === 0) {
+      form.setError("selectedProviders", {
+        message: "Please select at least one AI provider",
+      });
+    }
+
+    // Validate prompt count
+    if (!data.promptCount || data.promptCount < 5 || data.promptCount > 50) {
+      form.setError("promptCount", {
+        message: "Prompts must be between 5 and 50",
+      });
+    }
+
+    // If any errors, stop submission
+    if (Object.keys(form.formState.errors).length > 0) {
       return;
     }
 
@@ -112,73 +155,80 @@ export const SearchForm: React.FC = () => {
   };
 
   return (
-    <Card>
+    <Card className="bg-transparent">
       <CardHeader>
-        <CardTitle>Start New Analysis</CardTitle>
-        <CardDescription>Configure your AI visibility analysis</CardDescription>
+        <CardTitle>Configure Your Analysis</CardTitle>
+        <CardDescription>
+          Set up your brand visibility analysis parameters
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Product Name */}
-            <FormField
-              control={form.control}
-              name="productName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Notion" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            {/* Product Name, Primary Brand, Category - Grid of 3 */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <FormField
+                control={form.control}
+                name="productName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Notion" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-            {/* Primary Brand */}
-            <FormField
-              control={form.control}
-              name="primaryBrand"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Your Brand Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Notion" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="primaryBrand"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Your Brand Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Notion" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-            {/* Category */}
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <FormControl>
-                    <select
-                      className="border-input bg-background ring-offset-background file:text-foreground placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
-                      {...field}
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
                     >
-                      <option value="">Select a category</option>
-                      {CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                      <FormControl className="w-full">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            {/* Competitors */}
-            <div className="space-y-3">
+            {/* Competitors - Grid of 4 */}
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <FormLabel>
+                <FormLabel
+                  className={cn(
+                    form.formState.errors.competitors && "text-destructive",
+                  )}
+                >
                   Competitor Brands (min {ANALYSIS_CONFIG.brands.min}, max{" "}
                   {ANALYSIS_CONFIG.brands.max})
                 </FormLabel>
@@ -194,9 +244,9 @@ export const SearchForm: React.FC = () => {
                 </Button>
               </div>
 
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
                 {competitors.map((competitor, index) => (
-                  <div key={index} className="flex gap-2">
+                  <div key={index} className="relative">
                     <Input
                       placeholder={`Competitor ${index + 1}`}
                       value={competitor}
@@ -207,9 +257,10 @@ export const SearchForm: React.FC = () => {
                     {competitors.length > ANALYSIS_CONFIG.brands.min && (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveCompetitor(index)}
+                        className="absolute top-1/2 right-1 h-8 w-8 -translate-y-1/2"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -225,7 +276,7 @@ export const SearchForm: React.FC = () => {
               )}
             </div>
 
-            {/* AI Providers Selection */}
+            {/* AI Providers Selection - Only Enabled Providers */}
             <FormField
               control={form.control}
               name="selectedProviders"
@@ -236,96 +287,99 @@ export const SearchForm: React.FC = () => {
                     Select which AI platforms to analyze (more providers = more
                     comprehensive results)
                   </FormDescription>
-                  <div className="space-y-2">
-                    {enabledProviders.map((provider) => (
-                      <div
-                        key={provider.id}
-                        className="flex items-center space-x-2"
-                      >
-                        <input
-                          type="checkbox"
-                          id={provider.id}
-                          checked={field.value?.includes(provider.id)}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            const currentValue = field.value || [];
+                  <div className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {enabledProviders.map((provider) => {
+                      const isSelected = field.value?.includes(provider.id);
 
-                            if (checked) {
-                              field.onChange([...currentValue, provider.id]);
-                            } else {
+                      return (
+                        <div
+                          key={provider.id}
+                          className={cn(
+                            "relative cursor-pointer border px-4 py-3 pr-3 transition-all hover:shadow-md",
+                            isSelected && "border-primary/70 shadow-lg",
+                            form.formState.errors.selectedProviders &&
+                              !isSelected &&
+                              "border-destructive",
+                          )}
+                          onClick={() => {
+                            const currentValue = field.value || [];
+                            if (isSelected) {
                               field.onChange(
                                 currentValue.filter((id) => id !== provider.id),
                               );
+                            } else {
+                              field.onChange([...currentValue, provider.id]);
                             }
                           }}
-                          className="h-4 w-4 rounded border-gray-300"
-                        />
-                        <label
-                          htmlFor={provider.id}
-                          className="flex flex-1 items-center justify-between text-sm"
                         >
-                          <div>
-                            <span className="font-medium">
-                              {provider.displayName}
-                            </span>
-                            <span className="text-muted-foreground ml-2">
-                              {provider.description}
-                            </span>
+                          <div className="p-0">
+                            <div className="flex items-start justify-between">
+                              <p className="font-medium">
+                                {provider.displayName}
+                              </p>
+                              <div
+                                className={cn(
+                                  "flex h-4 w-4 items-center justify-center rounded border",
+                                  isSelected
+                                    ? "border-primary bg-primary"
+                                    : "border-muted-foreground",
+                                )}
+                              >
+                                {isSelected && (
+                                  <Check className="text-primary-foreground h-3 w-3" />
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs ${
-                              provider.category === "free"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-blue-100 text-blue-700"
-                            }`}
-                          >
-                            {provider.category}
-                          </span>
-                        </label>
-                      </div>
-                    ))}
+                          <div className="space-y-2">
+                            <p className="text-muted-foreground text-sm">
+                              {provider.description}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Prompt Count */}
+            {/* Number of Prompts with Number Input */}
             <FormField
               control={form.control}
               name="promptCount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Number of Prompts</FormLabel>
+                  <FormLabel>
+                    Number of Prompts [ config coming soon ]
+                  </FormLabel>
                   <FormDescription>
-                    How many search queries to test (min{" "}
-                    {ANALYSIS_CONFIG.prompts.min}, max{" "}
-                    {ANALYSIS_CONFIG.prompts.max})
+                    How many search queries to test per provider (default 05)
                   </FormDescription>
                   <FormControl>
-                    <div className="flex items-center gap-4">
+                    <div className="space-y-4">
                       <Input
                         type="number"
-                        min={ANALYSIS_CONFIG.prompts.min}
-                        max={ANALYSIS_CONFIG.prompts.max}
+                        min={5}
+                        max={50}
+                        placeholder="Enter number of prompts"
+                        disabled
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value))
-                        }
-                        className="w-32"
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value)) {
+                            field.onChange(value);
+                          }
+                        }}
+                        className="w-full"
                       />
-                      <span className="text-muted-foreground text-sm">
-                        Total queries:{" "}
-                        {field.value * (selectedProviders?.length || 1)}
-                      </span>
                     </div>
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Submit Button */}
+            {/* Submit and Cancel Buttons */}
             <div className="flex gap-3">
               <Button
                 type="submit"

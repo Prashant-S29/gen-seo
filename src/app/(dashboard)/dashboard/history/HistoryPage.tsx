@@ -2,42 +2,95 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import {
-  Clock,
-  TrendingUp,
   Trash2,
-  Eye,
-  CheckCircle,
-  XCircle,
   Loader2,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
+  Loader,
+  ArrowUpRight,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Skeleton } from "~/components/ui/skeleton";
 import { api } from "~/trpc/react";
+import { Container } from "~/components/common";
+import Link from "next/link";
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  type ColumnDef,
+} from "@tanstack/react-table";
+import { Badge } from "~/components/ui/badge";
+
+type Session = {
+  id: string;
+  productName: string;
+  category: string;
+  brands: string[];
+  primaryBrand: string;
+  status: string;
+  completedPrompts: number;
+  totalPrompts: number;
+  createdAt: Date;
+};
 
 export const HistoryPage: React.FC = () => {
   const router = useRouter();
   const utils = api.useUtils();
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [sessionToDelete, setSessionToDelete] = React.useState<string | null>(
+    null,
+  );
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    api.analysis.listSessions.useInfiniteQuery(
-      { limit: 20 },
-      {
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
-      },
-    );
+  const { data, isLoading } = api.analysis.listSessions.useQuery({
+    page: currentPage,
+    limit: pageSize,
+  });
 
   const deleteSession = api.analysis.deleteSession.useMutation({
     onSuccess: () => {
-      // Invalidate and refetch sessions list
       void utils.analysis.listSessions.invalidate();
+      setDeleteDialogOpen(false);
+      setSessionToDelete(null);
     },
   });
 
-  const handleDelete = (sessionId: string) => {
-    if (confirm("Are you sure you want to delete this analysis?")) {
-      deleteSession.mutate({ sessionId });
+  const handleDeleteClick = (sessionId: string) => {
+    setSessionToDelete(sessionId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (sessionToDelete) {
+      deleteSession.mutate({ sessionId: sessionToDelete });
     }
   };
 
@@ -45,191 +98,335 @@ export const HistoryPage: React.FC = () => {
     router.push(`/dashboard/results/${sessionId}`);
   };
 
-  const sessions = data?.pages.flatMap((page) => page.sessions) ?? [];
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(Number(value));
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto max-w-6xl py-8">
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const sessions = data?.sessions ?? [];
+  const totalPages = data?.totalPages ?? 1;
+
+  const columns: ColumnDef<Session>[] = [
+    {
+      accessorKey: "productName",
+      header: "Product Name",
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium">{row.original.productName}</div>
+          {/*<div className="text-muted-foreground text-xs">
+            {format(new Date(row.original.createdAt), "MMM d, yyyy")}
+          </div>*/}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "category",
+      header: "Category",
+      cell: ({ row }) => <span>{row.original.category}</span>,
+    },
+    {
+      accessorKey: "prompts",
+      header: "Prompts",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          {row.original.completedPrompts} / {row.original.totalPrompts}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => (
+        <div>
+          {row.original.status === "completed" ? (
+            <Badge variant="success">Completed</Badge>
+          ) : row.original.status === "failed" ? (
+            <Badge variant="destructive">Failed</Badge>
+          ) : (
+            <Badge variant="secondary">
+              <Loader className="animate-spin" />
+              Processing
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "competitors",
+      header: "Competitors",
+      cell: ({ row }) => {
+        const competitors = row.original.brands.filter(
+          (brand) => brand !== row.original.primaryBrand,
+        );
+        return (
+          <div className="flex flex-wrap gap-1">
+            {competitors.slice(0, 3).map((brand) => (
+              <span
+                key={brand}
+                className="bg-muted rounded-full px-2 py-0.5 text-xs"
+              >
+                {brand}
+              </span>
+            ))}
+            {competitors.length > 3 && (
+              <span className="text-muted-foreground rounded-full px-2 py-0.5 text-xs">
+                +{competitors.length - 3} more
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex gap-2">
+          {row.original.status === "completed" && (
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => handleView(row.original.id)}
+            >
+              <ArrowUpRight />
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => handleDeleteClick(row.original.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const table = useReactTable({
+    data: sessions,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const LoadingSkeleton = () => (
+    <Table className="border">
+      <TableHeader>
+        <TableRow>
+          <TableHead>Product Name</TableHead>
+          <TableHead>Category</TableHead>
+          <TableHead>Prompts</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Competitors</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {Array.from({ length: 5 }).map((_, index) => (
+          <TableRow key={index}>
+            <TableCell>
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-[100px]" />
+              </div>
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[120px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[80px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[100px]" />
+            </TableCell>
+            <TableCell>
+              <div className="flex gap-1">
+                <Skeleton className="h-5 w-[60px] rounded-full" />
+                <Skeleton className="h-5 w-[60px] rounded-full" />
+              </div>
+            </TableCell>
+            <TableCell>
+              <div className="flex gap-2">
+                <Skeleton className="h-4 w-[90px]" />
+                <Skeleton className="h-4 w-[40px]" />
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-6 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Analysis History</h1>
-          <p className="text-muted-foreground mt-1">
-            View and manage your past analyses
-          </p>
-        </div>
-        <Button onClick={() => router.push("/dashboard/search")}>
-          New Analysis
-        </Button>
-      </div>
-
-      {/* Sessions List */}
-      {sessions.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">No analyses yet</p>
-            <Button
-              className="mt-4"
-              onClick={() => router.push("/dashboard/search")}
-            >
-              Create Your First Analysis
+    <Container>
+      <div className="flex min-h-screen w-full flex-col py-15">
+        <section className="flex justify-between border-b p-8">
+          <section>
+            <h1 className="font-clashDisplay mt-5 text-5xl leading-tight font-medium">
+              History
+            </h1>
+            <p className="text-muted-foreground mt-1 text-lg">
+              Track all your past analyses and manage them easily.
+            </p>
+          </section>
+          <section className="flex items-center gap-3">
+            <Button size="lg" asChild className="h-9">
+              <Link href="/dashboard/search">+ New Analysis</Link>
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {sessions.map((session) => (
-            <Card key={session.id} className="hover:bg-muted/50">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-xl">
-                        {session.productName}
-                      </CardTitle>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs ${
-                          session.status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : session.status === "processing"
-                              ? "bg-blue-100 text-blue-700"
-                              : session.status === "failed"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-gray-100 text-gray-700"
-                        }`}
+            <Button size="lg" asChild variant="secondary">
+              <Link href="/dashboard">Back to Dashboard</Link>
+            </Button>
+          </section>
+        </section>
+
+        {/* Table Content */}
+        <div className="p-8">
+          {isLoading ? (
+            <LoadingSkeleton />
+          ) : (
+            <>
+              <Table className="border">
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
                       >
-                        {session.status}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      {session.category} • {session.brands.length} brands
-                      tracked
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {session.status === "completed" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleView(session.id)}
-                      >
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Results
-                      </Button>
-                    )}
+                        No analysis sessions found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-between border-t px-4 py-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Rows per page:</span>
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={handlePageSizeChange}
+                  >
+                    <SelectTrigger className="h-8 w-[70px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <div className="flex gap-1">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(session.id)}
-                      disabled={deleteSession.isPending}
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => prev - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => prev + 1)}
+                      disabled={currentPage >= totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage >= totalPages}
+                    >
+                      <ChevronsRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="text-muted-foreground h-4 w-4" />
-                    <div>
-                      <p className="text-muted-foreground text-xs">Created</p>
-                      <p className="text-sm font-medium">
-                        {format(new Date(session.createdAt), "MMM d, yyyy")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="text-muted-foreground h-4 w-4" />
-                    <div>
-                      <p className="text-muted-foreground text-xs">Prompts</p>
-                      <p className="text-sm font-medium">
-                        {session.completedPrompts} / {session.totalPrompts}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {session.status === "completed" ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : session.status === "failed" ? (
-                      <XCircle className="h-4 w-4 text-red-500" />
-                    ) : (
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                    )}
-                    <div>
-                      <p className="text-muted-foreground text-xs">Status</p>
-                      <p className="text-sm font-medium capitalize">
-                        {session.status}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div>
-                      <p className="text-muted-foreground text-xs">
-                        Primary Brand
-                      </p>
-                      <p className="text-sm font-medium">
-                        {session.primaryBrand}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Competitors Pills */}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="text-muted-foreground text-xs">
-                    Competitors:
-                  </span>
-                  {session.brands
-                    .filter((brand) => brand !== session.primaryBrand)
-                    .map((brand) => (
-                      <span
-                        key={brand}
-                        className="bg-muted rounded-full px-2 py-0.5 text-xs"
-                      >
-                        {brand}
-                      </span>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {/* Load More Button */}
-          {hasNextPage && (
-            <div className="flex justify-center py-4">
-              <Button
-                variant="outline"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  "Load More"
-                )}
-              </Button>
-            </div>
+              </div>
+            </>
           )}
         </div>
-      )}
-    </div>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete this
+              analysis session and all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteSession.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteSession.isPending}
+            >
+              {deleteSession.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Confirm Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Container>
   );
 };

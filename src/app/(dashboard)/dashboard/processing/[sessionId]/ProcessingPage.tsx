@@ -2,10 +2,12 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Loader2, CheckCircle2 } from "lucide-react";
+import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
+import { Badge } from "~/components/ui/badge";
 import { api } from "~/trpc/react";
+import { BackdropGrid, Container } from "~/components/common";
 
 interface ProcessingPageProps {
   sessionId: string;
@@ -33,176 +35,392 @@ export const ProcessingPage: React.FC<ProcessingPageProps> = ({
     },
   );
 
-  // Redirect to results when completed
-  useEffect(() => {
-    if (session?.status === "completed") {
-      // Wait 2 seconds before redirecting to show completion state
-      setTimeout(() => {
-        router.push(`/dashboard/results/${sessionId}`);
-      }, 2000);
-    }
-  }, [session?.status, sessionId, router]);
-
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-3xl py-8">
-        <Card>
-          <CardContent className="py-8">
-            <div className="flex items-center justify-center">
-              <Loader2 className="text-primary h-8 w-8 animate-spin" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Container>
+        <div className="flex min-h-screen items-center justify-center">
+          <Card>
+            <CardContent className="py-8">
+              <div className="flex items-center justify-center">
+                <Loader2 className="text-primary h-8 w-8 animate-spin" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Container>
     );
   }
 
   if (!session) {
     return (
-      <div className="container mx-auto max-w-3xl py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Session Not Found</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              The analysis session could not be found.
-            </p>
-            <Button
-              className="mt-4"
-              onClick={() => router.push("/dashboard/search")}
-            >
-              Start New Analysis
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <Container>
+        <div className="flex min-h-screen items-center justify-center">
+          <Card>
+            <CardContent className="py-8">
+              <p className="text-muted-foreground mb-4">
+                The analysis session could not be found.
+              </p>
+              <Button onClick={() => router.push("/dashboard/search")}>
+                Start New Analysis
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </Container>
     );
   }
 
-  const progress =
-    session.totalPrompts > 0
-      ? Math.round((session.completedPrompts / session.totalPrompts) * 100)
-      : 0;
+  const isCompleted = session.status === "completed";
+  const isFailed = session.status === "failed";
+
+  // Determine current step based on status
+  const getCurrentStep = () => {
+    if (isCompleted) return 7;
+    if (isFailed) return 5;
+    return 5; // Currently processing step 5
+  };
+
+  const currentStep = getCurrentStep();
+
+  const getStepStatus = (step: number) => {
+    if (step < 5) return "completed";
+    if (step === 5 && currentStep >= 5 && !isCompleted) return "loading";
+    if (step === 5 && isCompleted) return "completed";
+    return "not-started";
+  };
+
+  const getStatusBadge = (step: number) => {
+    const status = getStepStatus(step);
+
+    if ((step === 6 || step === 7) && isCompleted) {
+      return (
+        <Badge variant="default" className="flex items-center gap-1">
+          <CheckCircle2 className="h-3 w-3" />
+          Completed
+        </Badge>
+      );
+    }
+
+    if (status === "loading") {
+      return (
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Processing...
+        </Badge>
+      );
+    }
+    if (status === "completed") {
+      return (
+        <Badge variant="default" className="flex items-center gap-1">
+          <CheckCircle2 className="h-3 w-3" />
+          Completed
+        </Badge>
+      );
+    }
+    return <Badge variant="outline">Pending</Badge>;
+  };
+
+  const isStepExpanded = (step: number) => {
+    return getStepStatus(step) === "completed";
+  };
 
   return (
-    <div className="container mx-auto max-w-3xl py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {session.status === "completed" && "Analysis Complete"}
-            {session.status === "processing" && "Analysis In Progress"}
-            {session.status === "failed" && "Analysis Failed"}
-            {session.status === "pending" && "Analysis Starting"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Status Icon */}
-          <div className="flex flex-col items-center justify-center space-y-4 py-8">
-            {session.status === "processing" && (
-              <Loader2 className="text-primary h-16 w-16 animate-spin" />
-            )}
-            {session.status === "completed" && (
-              <CheckCircle2 className="h-16 w-16 text-green-500" />
-            )}
-            {session.status === "failed" && (
-              <XCircle className="h-16 w-16 text-red-500" />
-            )}
-            {session.status === "pending" && (
-              <Loader2 className="text-primary h-16 w-16 animate-spin" />
-            )}
+    <Container>
+      <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden py-8">
+        <BackdropGrid rows={15} columns={14} length={350} />
 
-            <div className="text-center">
-              <h3 className="text-lg font-semibold">
-                Analyzing {session.productName}
-              </h3>
-              <p className="text-muted-foreground mt-2 text-sm">
-                Category: {session.category}
-              </p>
+        <div className="bg-card relative z-10 flex max-h-150 w-full max-w-xl flex-col gap-8 overflow-y-auto rounded-lg border p-8 shadow-lg">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b pb-4">
+            <div>
+              <h1 className="text-2xl font-bold">Analysis in Progress</h1>
             </div>
-          </div>
-
-          {/* Progress Bar */}
-          {session.status === "processing" && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Progress</span>
-                <span className="font-medium">{progress}%</span>
-              </div>
-              <div className="bg-secondary h-2 w-full overflow-hidden rounded-full">
-                <div
-                  className="bg-primary h-full transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="text-muted-foreground text-center text-sm">
-                {session.completedPrompts} of {session.totalPrompts} prompts
-                completed
-              </p>
-            </div>
-          )}
-
-          {/* Status Details */}
-          <div className="bg-muted/50 rounded-lg border p-4">
-            <h4 className="mb-2 font-medium">Status:</h4>
-            <ul className="text-muted-foreground space-y-1 text-sm">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                Session created
-              </li>
-              <li className="flex items-center gap-2">
-                {session.status === "pending" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                )}
-                Generating prompts
-              </li>
-              <li className="flex items-center gap-2">
-                {session.status === "processing" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : session.status === "completed" ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                ) : (
-                  <div className="h-4 w-4" />
-                )}
-                Querying AI platforms
-              </li>
-              <li className="flex items-center gap-2">
-                {session.status === "completed" ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                ) : (
-                  <div className="h-4 w-4" />
-                )}
-                Analyzing results
-              </li>
-            </ul>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            {session.status === "failed" && (
-              <Button
-                className="flex-1"
-                onClick={() => router.push("/dashboard/search")}
-              >
-                Try Again
-              </Button>
-            )}
-            {session.status === "completed" && (
-              <Button
-                className="flex-1"
-                onClick={() => router.push(`/dashboard/results/${sessionId}`)}
-              >
-                View Results
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => router.push("/dashboard")}>
-              Back to Dashboard
+            <Button
+              disabled={!isCompleted}
+              onClick={() => router.push(`/dashboard/results/${sessionId}`)}
+            >
+              See Report
             </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          {/* Step 1 - User Input */}
+          <div className="flex flex-col gap-2">
+            <section className="flex items-center justify-between">
+              <Badge variant="outline">Step 1</Badge>
+              {getStatusBadge(1)}
+            </section>
+            <section
+              className={`${getStepStatus(1) === "completed" ? "border-border" : "border-primary/50"} w-full border-2 border-dashed p-2 transition-all`}
+            >
+              <section className="bg-card border">
+                <section className="flex items-center justify-between px-3 py-3">
+                  <p className="font-semibold">User Input</p>
+                </section>
+                <section
+                  className={`overflow-hidden transition-all duration-500 ${
+                    isStepExpanded(1) ? "max-h-96" : "max-h-0"
+                  }`}
+                >
+                  <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                    <section className="flex items-center justify-between">
+                      <p className="text-muted-foreground">Product</p>
+                      <p className="font-medium">{session.productName}</p>
+                    </section>
+                    <section className="flex items-center justify-between">
+                      <p className="text-muted-foreground">Primary Brand</p>
+                      <p className="font-medium">{session.primaryBrand}</p>
+                    </section>
+                    <section className="flex items-center justify-between">
+                      <p className="text-muted-foreground">Category</p>
+                      <p className="font-medium">{session.category}</p>
+                    </section>
+                  </section>
+                </section>
+              </section>
+            </section>
+          </div>
+
+          {/* Step 2 - AI Enrichment */}
+          <div className="flex flex-col gap-2">
+            <section className="flex items-center justify-between">
+              <Badge variant="outline">Step 2</Badge>
+              {getStatusBadge(2)}
+            </section>
+            <section
+              className={`${getStepStatus(2) === "completed" ? "border-border" : "border-primary/50"} w-full border-2 border-dashed p-2 transition-all`}
+            >
+              <section className="bg-card border">
+                <section className="flex items-center justify-between px-3 py-3">
+                  <p className="font-semibold">AI Enrichment</p>
+                </section>
+                <section
+                  className={`overflow-hidden transition-all duration-500 ${
+                    isStepExpanded(2) ? "max-h-96" : "max-h-0"
+                  }`}
+                >
+                  <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                    <section className="flex flex-col gap-2">
+                      <p className="text-muted-foreground">Brands Analyzed</p>
+                      <section className="flex flex-wrap gap-2">
+                        {session.brands.map((brand) => (
+                          <Badge key={brand} variant="secondary">
+                            {brand}
+                          </Badge>
+                        ))}
+                      </section>
+                    </section>
+                  </section>
+                  <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                    <p className="text-muted-foreground">Description</p>
+                    <p className="text-sm leading-snug">
+                      Enhanced product information with AI-generated insights
+                      and competitive context.
+                    </p>
+                  </section>
+                </section>
+              </section>
+            </section>
+          </div>
+
+          {/* Step 3 - Finding Competitors */}
+          <div className="flex flex-col gap-2">
+            <section className="flex items-center justify-between">
+              <Badge variant="outline">Step 3</Badge>
+              {getStatusBadge(3)}
+            </section>
+            <section
+              className={`${getStepStatus(3) === "completed" ? "border-border" : "border-primary/50"} w-full border-2 border-dashed p-2 transition-all`}
+            >
+              <section className="bg-card border">
+                <section className="flex items-center justify-between px-3 py-3">
+                  <p className="font-semibold">Finding Competitors</p>
+                </section>
+                <section
+                  className={`overflow-hidden transition-all duration-500 ${
+                    isStepExpanded(3) ? "max-h-96" : "max-h-0"
+                  }`}
+                >
+                  <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                    <section className="flex items-center justify-between">
+                      <p className="text-muted-foreground">Competitors Found</p>
+                      <p className="font-medium">{session.brands.length}</p>
+                    </section>
+                  </section>
+                  <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                    <p className="text-muted-foreground">Description</p>
+                    <p className="text-sm leading-snug">
+                      Identified key competitors in the {session.category}{" "}
+                      category for comprehensive analysis.
+                    </p>
+                  </section>
+                </section>
+              </section>
+            </section>
+          </div>
+
+          {/* Step 4 - Generate Prompts */}
+          <div className="flex flex-col gap-2">
+            <section className="flex items-center justify-between">
+              <Badge variant="outline">Step 4</Badge>
+              {getStatusBadge(4)}
+            </section>
+            <section
+              className={`${getStepStatus(4) === "completed" ? "border-border" : "border-primary/50"} w-full border-2 border-dashed p-2 transition-all`}
+            >
+              <section className="bg-card border">
+                <section className="flex items-center justify-between px-3 py-3">
+                  <p className="font-semibold">Generate Prompts</p>
+                </section>
+                <section
+                  className={`overflow-hidden transition-all duration-500 ${
+                    isStepExpanded(4) ? "max-h-96" : "max-h-0"
+                  }`}
+                >
+                  <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                    <section className="flex items-center justify-between">
+                      <p className="text-muted-foreground">Total Prompts</p>
+                      <p className="font-medium">{session.promptCount}</p>
+                    </section>
+                    <section className="flex items-center justify-between gap-2">
+                      <p className="text-muted-foreground">Analysis Method</p>
+                      <Badge variant="secondary">
+                        {session.analysisMethod === "both"
+                          ? "API + Crawling"
+                          : session.analysisMethod === "api_only"
+                            ? "API Only"
+                            : "Crawling Only"}
+                      </Badge>
+                    </section>
+                  </section>
+                  <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                    <p className="text-muted-foreground">Description</p>
+                    <p className="text-sm leading-snug">
+                      Generated {session.promptCount} targeted search prompts
+                      for analysis across selected AI platforms.
+                    </p>
+                  </section>
+                </section>
+              </section>
+            </section>
+          </div>
+
+          {/* Step 5 - Dual Analysis */}
+          <div className="flex flex-col gap-2">
+            <section className="flex items-center justify-between">
+              <Badge variant="outline">Step 5</Badge>
+              {getStatusBadge(5)}
+            </section>
+            <section
+              className={`${getStepStatus(5) === "loading" ? "border-primary dark:border-primary/70" : getStepStatus(5) === "completed" ? "border-border" : "border-primary/50"} w-full border-2 border-dashed p-2 transition-all`}
+            >
+              <section className="bg-card border">
+                <section className="flex items-center justify-between px-3 py-3">
+                  <p className="font-semibold">Dual Analysis</p>
+                </section>
+                <section
+                  className={`overflow-hidden transition-all duration-500 ${
+                    isStepExpanded(5) || getStepStatus(5) === "loading"
+                      ? "max-h-96"
+                      : "max-h-0"
+                  }`}
+                >
+                  <section className="space-y-4 border-t px-3 pt-2 pb-3">
+                    <section className="flex items-center justify-between">
+                      <p className="text-muted-foreground">Progress</p>
+                      <p className="font-medium">
+                        {session.completedPrompts} / {session.totalPrompts}
+                      </p>
+                    </section>
+                    <div className="bg-secondary h-2 w-full overflow-hidden rounded-full">
+                      <div
+                        className="bg-primary h-full transition-all duration-500"
+                        style={{
+                          width: `${(session.completedPrompts / session.totalPrompts) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <section className="flex flex-wrap gap-2">
+                      {session.selectedProviders.map((provider) => (
+                        <Badge key={provider} variant="secondary">
+                          {provider}
+                        </Badge>
+                      ))}
+                    </section>
+                  </section>
+                  <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                    <p className="text-muted-foreground">Description</p>
+                    <p className="text-sm leading-snug">
+                      Running comprehensive analysis across{" "}
+                      {session.selectedProviders.length} AI platforms using{" "}
+                      {session.analysisMethod === "both"
+                        ? "both API and web crawling methods"
+                        : session.analysisMethod}
+                      .
+                    </p>
+                  </section>
+                </section>
+              </section>
+            </section>
+          </div>
+
+          {/* Step 6 - Extract Data */}
+          <div className="flex flex-col gap-2">
+            <section className="flex items-center justify-between">
+              <Badge variant="outline">Step 6</Badge>
+              {getStatusBadge(6)}
+            </section>
+            <section
+              className={`border-border w-full border-2 border-dashed p-2 transition-all`}
+            >
+              <section className="bg-card border">
+                <section className="flex items-center justify-between px-3 py-3">
+                  <p className="font-semibold">Extract Data</p>
+                </section>
+              </section>
+            </section>
+          </div>
+
+          {/* Step 7 - Final Results */}
+          <div className="flex flex-col gap-2">
+            <section className="flex items-center justify-between">
+              <Badge variant="outline">Step 7</Badge>
+              {getStatusBadge(7)}
+            </section>
+            <section
+              className={`border-border w-full border-2 border-dashed p-2 transition-all`}
+            >
+              <section className="bg-card flex items-center justify-between border px-3 py-3">
+                <section className="flex items-center justify-between">
+                  <p className="font-semibold">Final Results</p>
+                </section>
+                <Button
+                  size="sm"
+                  onClick={() => router.push(`/dashboard/results/${sessionId}`)}
+                  disabled={!isCompleted}
+                >
+                  See Report
+                </Button>
+              </section>
+            </section>
+          </div>
+
+          {/* Show error message */}
+          {/*{isFailed && (
+            <div className="border-destructive bg-destructive/10 rounded-lg border p-4 text-center">
+              <h3 className="mb-2 text-lg font-semibold">Analysis Failed</h3>
+              <p className="text-muted-foreground mb-4 text-sm">
+                There was an error processing your analysis. Please try again.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/dashboard/search")}
+              >
+                Start New Analysis
+              </Button>
+            </div>
+          )}*/}
+        </div>
+      </div>
+    </Container>
   );
 };

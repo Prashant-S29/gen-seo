@@ -23,7 +23,7 @@ const HowItWorks: React.FC = () => {
             <Button size="lg" asChild>
               <Link href="/dashboard">Start Your Analysis</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="link" asChild>
               <Link href="/ideology">Why This Matters</Link>
             </Button>
           </section>
@@ -47,13 +47,15 @@ const HowItWorks: React.FC = () => {
 
         {/* Interactive Flow Canvas */}
         <section className="border-b p-8">
-          <h1 className="text-xl leading-tight font-semibold">Analysis Flow</h1>
+          <h1 className="text-xl leading-tight font-semibold">
+            Demo Analysis Flow
+          </h1>
           <p className="text-muted-foreground mt-2 text-lg">
             Click &rdquo;Analyze&rdquo; on each step to see the data flow
             through our system.
           </p>
 
-          <DemoAnalysisCanvas />
+          <DemoAnalysisCanvas className="my-8 flex h-150 w-full flex-col items-center gap-12 overflow-y-scroll border p-20" />
 
           <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
             <p className="text-sm text-amber-800 dark:text-amber-200">

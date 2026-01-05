@@ -8,7 +8,13 @@ import { Loader } from "lucide-react";
 
 type StepStatus = "not-started" | "loading" | "completed";
 
-export const DemoAnalysisCanvas = () => {
+interface DemoAnalysisCanvasProps {
+  className?: string;
+}
+
+export const DemoAnalysisCanvas: React.FC<DemoAnalysisCanvasProps> = ({
+  className,
+}) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>(
     Array(7).fill("not-started"),
@@ -64,7 +70,7 @@ export const DemoAnalysisCanvas = () => {
   };
 
   return (
-    <div className="my-8 flex h-150 w-full flex-col items-center gap-12 overflow-y-scroll border p-20">
+    <div className={className}>
       {/* Step 1 - User Input */}
       <div className="flex flex-col gap-2">
         <section className="flex items-center justify-between">
@@ -72,7 +78,7 @@ export const DemoAnalysisCanvas = () => {
           {getStatusBadge(0)}
         </section>
         <section
-          className={`${currentStep === 1 ? "border-primary/70" : "border-border"} w-100 border border-dashed p-2`}
+          className={`${currentStep === 1 ? "border-primary dark:border-primary/70" : "border-border"} w-100 border-2 border-dashed p-2`}
         >
           <section className="bg-card border">
             <section className="flex items-center justify-between px-3 py-3">
@@ -96,6 +102,14 @@ export const DemoAnalysisCanvas = () => {
                 <p>{mockAnalysisData.step1.input.productName}</p>
               </section>
             </section>
+            <section className="space-y-2 border-t px-3 pt-2 pb-3">
+              <section className="flex flex-col">
+                <p className="text-muted-foreground">Description</p>
+                <p className="leading-snug">
+                  {mockAnalysisData.step1.description}
+                </p>
+              </section>
+            </section>
           </section>
         </section>
       </div>
@@ -107,14 +121,13 @@ export const DemoAnalysisCanvas = () => {
           {getStatusBadge(1)}
         </section>{" "}
         <section
-          className={`${currentStep === 2 ? "border-primary/70" : "border-border"} w-100 border border-dashed p-2`}
+          className={`${currentStep === 2 ? "border-primary dark:border-primary/70" : "border-border"} w-100 border-2 border-dashed p-2`}
         >
           <section className="bg-card border">
             <section className="flex items-center justify-between px-3 py-3">
               <p className="font-semibold">AI Enrichment</p>
               <Button
                 size="sm"
-                variant="outline"
                 onClick={() => handleStepComplete(1)}
                 disabled={
                   stepStatuses[0] !== "completed" ||
@@ -145,6 +158,14 @@ export const DemoAnalysisCanvas = () => {
                   </section>
                 </section>
               </section>
+              <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                <section className="flex flex-col">
+                  <p className="text-muted-foreground">Description</p>
+                  <p className="leading-snug">
+                    {mockAnalysisData.step2.description}
+                  </p>
+                </section>
+              </section>
             </section>
           </section>
         </section>
@@ -157,14 +178,13 @@ export const DemoAnalysisCanvas = () => {
           {getStatusBadge(2)}
         </section>{" "}
         <section
-          className={`${currentStep === 3 ? "border-primary/70" : "border-border"} w-100 border border-dashed p-2`}
+          className={`${currentStep === 3 ? "border-primary dark:border-primary/70" : "border-border"} w-100 border-2 border-dashed p-2`}
         >
           <section className="bg-card border">
             <section className="flex items-center justify-between px-3 py-3">
               <p className="font-semibold">Finding Competitors</p>
               <Button
                 size="sm"
-                variant="outline"
                 onClick={() => handleStepComplete(2)}
                 disabled={
                   stepStatuses[1] !== "completed" ||
@@ -192,6 +212,14 @@ export const DemoAnalysisCanvas = () => {
                   ))}
                 </section>
               </section>
+              <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                <section className="flex flex-col">
+                  <p className="text-muted-foreground">Description</p>
+                  <p className="leading-snug">
+                    {mockAnalysisData.step3.description}
+                  </p>
+                </section>
+              </section>
             </section>
           </section>
         </section>
@@ -204,14 +232,13 @@ export const DemoAnalysisCanvas = () => {
           {getStatusBadge(3)}
         </section>
         <section
-          className={`${currentStep === 4 ? "border-primary/70" : "border-border"} w-100 border border-dashed p-2`}
+          className={`${currentStep === 4 ? "border-primary dark:border-primary/70" : "border-border"} w-100 border-2 border-dashed p-2`}
         >
           <section className="bg-card border">
             <section className="flex items-center justify-between px-3 py-3">
               <p className="font-semibold">Generate Prompts</p>
               <Button
                 size="sm"
-                variant="outline"
                 onClick={() => handleStepComplete(3)}
                 disabled={
                   stepStatuses[2] !== "completed" ||
@@ -250,6 +277,14 @@ export const DemoAnalysisCanvas = () => {
                   )}
                 </section>
               </section>
+              <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                <section className="flex flex-col">
+                  <p className="text-muted-foreground">Description</p>
+                  <p className="leading-snug">
+                    {mockAnalysisData.step4.description}
+                  </p>
+                </section>
+              </section>
             </section>
           </section>
         </section>
@@ -262,14 +297,13 @@ export const DemoAnalysisCanvas = () => {
           {getStatusBadge(4)}
         </section>
         <section
-          className={`${currentStep === 5 ? "border-primary/70" : "border-border"} w-100 border border-dashed p-2`}
+          className={`${currentStep === 5 ? "border-primary dark:border-primary/70" : "border-border"} w-100 border-2 border-dashed p-2`}
         >
           <section className="bg-card border">
             <section className="flex items-center justify-between px-3 py-3">
               <p className="font-semibold">Dual Analysis</p>
               <Button
                 size="sm"
-                variant="outline"
                 onClick={() => handleStepComplete(4)}
                 disabled={
                   stepStatuses[3] !== "completed" ||
@@ -322,6 +356,14 @@ export const DemoAnalysisCanvas = () => {
                   </section>
                 </section>
               </section>
+              <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                <section className="flex flex-col">
+                  <p className="text-muted-foreground">Description</p>
+                  <p className="leading-snug">
+                    {mockAnalysisData.step5.description}
+                  </p>
+                </section>
+              </section>
             </section>
           </section>
         </section>
@@ -334,14 +376,13 @@ export const DemoAnalysisCanvas = () => {
           {getStatusBadge(5)}
         </section>
         <section
-          className={`${currentStep === 6 ? "border-primary/70" : "border-border"} w-100 border border-dashed p-2`}
+          className={`${currentStep === 6 ? "border-primary dark:border-primary/70" : "border-border"} w-100 border-2 border-dashed p-2`}
         >
           <section className="bg-card border">
             <section className="flex items-center justify-between px-3 py-3">
               <p className="font-semibold">Extract Data</p>
               <Button
                 size="sm"
-                variant="outline"
                 onClick={() => handleStepComplete(5)}
                 disabled={
                   stepStatuses[4] !== "completed" ||
@@ -379,6 +420,14 @@ export const DemoAnalysisCanvas = () => {
                   </section>
                 </section>
               </section>
+              <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                <section className="flex flex-col">
+                  <p className="text-muted-foreground">Description</p>
+                  <p className="leading-snug">
+                    {mockAnalysisData.step6.description}
+                  </p>
+                </section>
+              </section>
             </section>
           </section>
         </section>
@@ -391,19 +440,27 @@ export const DemoAnalysisCanvas = () => {
           {getStatusBadge(6)}
         </section>
         <section
-          className={`${currentStep === 7 ? "border-primary/70" : "border-border"} w-100 border border-dashed p-2`}
+          className={`${currentStep === 7 ? "border-primary dark:border-primary/70" : "border-border"} w-100 border-2 border-dashed p-2`}
         >
           <section className="bg-card border">
             <section className="flex items-center justify-between px-3 py-3">
               <p className="font-semibold">Final Results</p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleReset}
-                disabled={stepStatuses[5] !== "completed"}
-              >
-                Reset
-              </Button>
+              {stepStatuses[6] !== "completed" ? (
+                <Button
+                  size="sm"
+                  onClick={() => handleStepComplete(6)}
+                  disabled={
+                    stepStatuses[5] !== "completed" ||
+                    stepStatuses[6] !== "not-started"
+                  }
+                >
+                  Analyze
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={handleReset}>
+                  Reset
+                </Button>
+              )}
             </section>
             <section
               className={`overflow-hidden transition-all duration-500 ${
@@ -449,6 +506,14 @@ export const DemoAnalysisCanvas = () => {
                       </Badge>
                     </section>
                   </section>
+                </section>
+              </section>
+              <section className="space-y-2 border-t px-3 pt-2 pb-3">
+                <section className="flex flex-col">
+                  <p className="text-muted-foreground">Description</p>
+                  <p className="leading-snug">
+                    {mockAnalysisData.step7.description}
+                  </p>
                 </section>
               </section>
             </section>

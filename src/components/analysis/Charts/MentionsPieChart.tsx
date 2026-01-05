@@ -30,7 +30,7 @@ export const MentionsPieChart: React.FC<MentionsPieChartProps> = ({ data }) => {
     .map((item, index) => ({
       brand: item.brand,
       mentions: item.mentions,
-      fill: `var(--color-brand${index + 1})`,
+      fill: `var(--chart-${index + 1})`,
     }));
 
   // Generate dynamic config based on data

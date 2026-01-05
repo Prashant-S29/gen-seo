@@ -4,7 +4,7 @@ import { analysisSessions } from "~/server/db/schema/db.schema.analysis";
 import { prompts } from "~/server/db/schema/db.schema.prompts";
 import { searchFormSchema } from "~/zodSchema/analysis";
 import { processAnalysisSession } from "~/server/services/session-orchestration";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, count } from "drizzle-orm";
 
 export const analysisRouter = createTRPCRouter({
   // Create new analysis session
@@ -12,7 +12,12 @@ export const analysisRouter = createTRPCRouter({
     .input(searchFormSchema)
     .mutation(async ({ ctx, input }) => {
       // Calculate total prompts (prompts × providers)
-      const totalPrompts = input.promptCount * input.selectedProviders.length;
+      // const totalPrompts = input.promptCount * input.selectedProviders.length;
+
+      // FIX
+      // hardcoded to 5 * input.selectedProviders.length for now
+      // (costs to much API quota)
+      const totalPrompts = 5 * input.selectedProviders.length;
 
       // Create session
       const session = await ctx.db
@@ -24,7 +29,8 @@ export const analysisRouter = createTRPCRouter({
           brands: [input.primaryBrand, ...input.competitors],
           category: input.category,
           selectedProviders: input.selectedProviders,
-          promptCount: input.promptCount,
+          // promptCount: input.promptCount,
+          promptCount: 5,
           status: "pending",
           totalPrompts: totalPrompts,
         })
@@ -39,7 +45,8 @@ export const analysisRouter = createTRPCRouter({
         brands: [input.primaryBrand, ...input.competitors],
         productName: input.productName,
         selectedProviders: input.selectedProviders,
-        promptCount: input.promptCount,
+        // promptCount: input.promptCount,
+        promptCount: 5,
       }).catch((error) => {
         console.error(`Failed to process session ${sessionId}:`, error);
       });
@@ -278,37 +285,39 @@ export const analysisRouter = createTRPCRouter({
       };
     }),
 
-  // list sessions
+  // list sessions with pagination
   listSessions: protectedProcedure
     .input(
       z.object({
+        page: z.number().min(1).default(1),
         limit: z.number().min(1).max(100).default(20),
-        cursor: z.string().uuid().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
+      const offset = (input.page - 1) * input.limit;
+
+      // Get total count
+      const totalCount = await ctx.db
+        .select({ count: count() })
+        .from(analysisSessions)
+        .where(eq(analysisSessions.userId, ctx.session.user.id));
+
+      const total = totalCount[0]?.count ?? 0;
+      const totalPages = Math.ceil(total / input.limit);
+
+      // Get sessions for current page
       const sessions = await ctx.db.query.analysisSessions.findMany({
         where: eq(analysisSessions.userId, ctx.session.user.id),
-        orderBy: (sessions, { desc }) => [desc(sessions.createdAt)],
-        limit: input.limit + 1,
-        ...(input.cursor && {
-          where: (sessions, { lt, and, eq }) =>
-            and(
-              eq(sessions.userId, ctx.session.user.id),
-              lt(sessions.id, input.cursor!),
-            ),
-        }),
+        orderBy: [desc(analysisSessions.createdAt)],
+        limit: input.limit,
+        offset: offset,
       });
-
-      let nextCursor: string | undefined = undefined;
-      if (sessions.length > input.limit) {
-        const nextItem = sessions.pop();
-        nextCursor = nextItem?.id;
-      }
 
       return {
         sessions,
-        nextCursor,
+        totalPages,
+        currentPage: input.page,
+        totalCount: total,
       };
     }),
 

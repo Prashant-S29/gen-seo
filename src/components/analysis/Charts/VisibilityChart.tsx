@@ -68,12 +68,12 @@ export const VisibilityChart: React.FC<VisibilityChartProps> = ({
             <ChartTooltip content={<ChartTooltipContent />} />
             <Bar
               dataKey="visibilityScore"
-              fill="var(--color-visibilityScore)"
+              fill="var(--foreground)"
               radius={[8, 8, 0, 0]}
             />
             <Bar
               dataKey="mentions"
-              fill="var(--color-mentions)"
+              fill="var(--foreground)"
               radius={[8, 8, 0, 0]}
             />
           </BarChart>

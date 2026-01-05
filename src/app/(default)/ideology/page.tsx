@@ -121,7 +121,7 @@ const Ideology: React.FC = () => {
                 mentioned.
               </p>
               <div className="bg-muted mt-4 rounded p-4 font-mono text-sm">
-                (Mentions ÷ Total Prompts) × 100
+                (Mentions / Total Prompts) × 100
               </div>
               <p className="text-muted-foreground mt-3 text-sm">
                 If 23 out of 100 queries mention you:{" "}
@@ -137,7 +137,7 @@ const Ideology: React.FC = () => {
                 Your percentage of total citations in your category.
               </p>
               <div className="bg-muted mt-4 rounded p-4 font-mono text-sm">
-                (Your Citations ÷ Total Category Citations) × 100
+                (Your Citations / Total Category Citations) × 100
               </div>
               <p className="text-muted-foreground mt-3 text-sm">
                 68 citations out of 450 total:{" "}
@@ -149,7 +149,7 @@ const Ideology: React.FC = () => {
 
             <div className="bg-card rounded-lg p-5">
               <h3 className="text-lg font-semibold">
-                Position & Context Matter
+                Position & Context Matters
               </h3>
               <p className="text-muted-foreground mt-2">
                 Not all mentions are equal. Being mentioned first, being the
@@ -225,9 +225,9 @@ const Ideology: React.FC = () => {
             <div className="bg-card rounded-lg border p-5">
               <h3 className="font-semibold">SaaS Companies</h3>
               <p className="text-muted-foreground mt-2">
-                Are you visible when prospects ask AI `&quot;What&apos;s the
-                best [your category]?`&quot; If not, you&apos;re losing deals
-                before they reach your website.
+                Are you visible when prospects ask AI &#x22;What&apos;s the best
+                [your category]?&#x22;If not, you&apos;re losing deals before
+                they reach your website.
               </p>
             </div>
 
@@ -383,8 +383,8 @@ const Ideology: React.FC = () => {
                 <p className="text-amber-800 dark:text-amber-200">
                   This project was developed as part of WriteSonic&apos;s
                   engineering challenge in January 2025. The challenge asked:
-                  `&quot;When someone asks ChatGPT for product recommendations,
-                  which brands get mentioned?`&quot; We built GenSEO to answer
+                  &#x22;When someone asks ChatGPT for product recommendations,
+                  which brands get mentioned?&#x22; We built GenSEO to answer
                   that question not just for ourselves, but for every brand
                   navigating the AI-first world.
                 </p>
@@ -397,10 +397,10 @@ const Ideology: React.FC = () => {
           <BackdropGrid rows={7} columns={15} length={200} />
           <section className="z-10 flex flex-col items-center justify-center">
             <h2 className="text-2xl font-bold">
-              The Question Isn&apos;t `&quot;Are You Ranking?`&quot;
+              The Question Isn&apos;t &#x22;Are You Ranking?&#x22;
             </h2>
             <p className="text-muted-foreground text-lg">
-              It&apos;s `&quot;Are you being mentioned?`&quot; And if not,
+              It&apos;s &#x22;Are you being mentioned?&#x22; And if not,
               you&apos;re invisible.
             </p>
           </section>

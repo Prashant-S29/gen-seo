@@ -5,6 +5,7 @@ export const mockAnalysisData = {
       url: "https://salesforce.com",
       productName: "Salesforce",
     },
+    description: "User enters the data about their product.",
   },
   step2: {
     productInfo: {
@@ -14,6 +15,8 @@ export const mockAnalysisData = {
       subCategories: ["Sales Automation", "CRM", "AI Tools"],
       tags: ["crm", "sales", "ai", "automation", "customer-management"],
     },
+    description:
+      "We analyze the information and also add more context to help us later.",
   },
   step3: {
     competitors: [
@@ -24,6 +27,8 @@ export const mockAnalysisData = {
       "Close",
       "Copper",
     ],
+    description:
+      "We find direct competitors to your product. This will help us in creating a competitive analysis.",
   },
   step4: {
     prompts: [
@@ -37,6 +42,8 @@ export const mockAnalysisData = {
       "Best CRM with automation capabilities",
       "Affordable CRM solutions for sales teams",
     ],
+    description:
+      "Once you review and finalize the information, we start generating comprehensive prompts from our templates.",
   },
   step5: {
     apiAnalysis: {
@@ -51,6 +58,8 @@ export const mockAnalysisData = {
       completed: 20,
       avgResponseTime: "18.5s",
     },
+    description:
+      "This is a major milestone in our process. We kick on our dual engine that runs parallely to generate both API and crawling analysis.",
   },
   step6: {
     mentions: {
@@ -83,6 +92,8 @@ export const mockAnalysisData = {
       neutral: 3,
       negative: 0,
     },
+    description:
+      "Here we extract various data points from results and analyze them to generate insights.",
   },
   step7: {
     finalMetrics: {
@@ -102,5 +113,6 @@ export const mockAnalysisData = {
         { brand: "Zoho CRM", score: 37.5 },
       ],
     },
+    description: "Using the filtered data, we generate a comprehensive report.",
   },
 };

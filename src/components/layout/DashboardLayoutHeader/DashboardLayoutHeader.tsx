@@ -15,25 +15,33 @@ import { Badge } from "~/components/ui/badge";
 const navLinks = [
   {
     label: "Home",
-    href: "",
+    href: "/",
   },
   {
     label: "Ideology",
-    href: "",
+    href: "/ideology",
+  },
+  {
+    label: "Features",
+    href: "/features",
   },
   {
     label: "How it works?",
-    href: "",
+    href: "/how-it-works",
   },
 ];
 
-export const Header: React.FC = () => {
+export const DashboardLayoutLheader: React.FC = () => {
   const { data, isRefetching, isPending } = authClient.useSession();
 
+  const handleLogout = async () => {
+    await authClient.signOut();
+  };
+
   return (
-    <div className="fixed top-0 z-10 flex w-full justify-center">
-      <div className="relative flex w-full max-w-5xl items-center justify-between px-8 py-6">
-        <h1>
+    <div className="fixed top-0 z-20 flex w-full justify-center">
+      <div className="bg-background relative flex w-full max-w-5xl items-center justify-between border-b px-8 py-6">
+        <h1 className="flex items-center gap-3">
           <Link href="/">GenSEO</Link>
           <Badge variant="outline">Beta Version</Badge>
         </h1>
@@ -51,8 +59,8 @@ export const Header: React.FC = () => {
           ) : (
             <>
               {data?.session.id ? (
-                <Button asChild size="sm" variant="outline">
-                  <Link href="/dashboard">Dashboard</Link>
+                <Button onClick={handleLogout} variant="outline" size="sm">
+                  Logout
                 </Button>
               ) : (
                 <Button asChild size="sm" variant="outline">

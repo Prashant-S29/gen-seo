@@ -122,7 +122,7 @@ export const LLM_PROVIDERS: LLMProvider[] = [
     model: "gpt-4-turbo",
     maxOutputTokens: 4096,
     temperature: 0.7,
-    isEnabled: false, // Disabled by default (requires paid API)
+    isEnabled: true, // Disabled by default (requires paid API)
     requiresApiKey: true,
     displayName: "GPT-4 Turbo",
     description: "Most capable OpenAI model",
@@ -241,14 +241,14 @@ export const LLM_PROVIDERS: LLMProvider[] = [
 
   // Perplexity Models
   {
-    id: "perplexity-sonar",
+    id: "sonar",
     slug: "sonar",
     name: "Perplexity Sonar",
     provider: "perplexity",
     model: "sonar",
     maxOutputTokens: 4096,
     temperature: 0.7,
-    isEnabled: false,
+    isEnabled: true,
     requiresApiKey: true,
     displayName: "Perplexity Sonar",
     description: "Real-time web search integration",

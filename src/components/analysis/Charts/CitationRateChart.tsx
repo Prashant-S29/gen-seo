@@ -66,7 +66,7 @@ export const CitationRateChart: React.FC<CitationRateChartProps> = ({
             <ChartTooltip content={<ChartTooltipContent />} />
             <Bar
               dataKey="citationRate"
-              fill="var(--color-citationRate)"
+              fill="var(--foreground)"
               radius={[8, 8, 0, 0]}
             />
           </BarChart>
