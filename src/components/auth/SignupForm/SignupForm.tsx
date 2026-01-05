@@ -236,7 +236,7 @@ export const SignupForm: React.FC = () => {
                 <div className="bg-border h-px w-full" />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <Button
                   variant="outline"
                   type="button"
@@ -252,7 +252,7 @@ export const SignupForm: React.FC = () => {
                   </svg>
                   Google
                 </Button>
-                <Button
+                {/*<Button
                   variant="outline"
                   type="button"
                   className="w-full"
@@ -266,7 +266,7 @@ export const SignupForm: React.FC = () => {
                     />
                   </svg>
                   GitHub
-                </Button>
+                </Button>*/}
               </div>
             </div>
             <FormDescription className="text-center">
