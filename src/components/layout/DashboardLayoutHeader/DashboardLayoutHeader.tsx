@@ -21,10 +21,10 @@ const navLinks = [
     label: "Ideology",
     href: "/ideology",
   },
-  {
-    label: "Features",
-    href: "/features",
-  },
+  // {
+  //   label: "Features",
+  //   href: "/features",
+  // },
   {
     label: "How it works?",
     href: "/how-it-works",
