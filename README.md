@@ -2,8 +2,8 @@
 
 Track how visible your brand is in AI search results across multiple AI platforms including ChatGPT, Claude, Gemini, and Perplexity.
 
-🔗 **Live Demo:** [Coming Soon]  
-📹 **Demo Video:** [Coming Soon]
+**Live Demo:** [Coming Soon]  
+**Demo Video:** [Coming Soon]
 
 ---
 
@@ -235,7 +235,7 @@ Dashboard shows:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
