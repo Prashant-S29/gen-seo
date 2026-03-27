@@ -31,33 +31,6 @@ const Ideology: React.FC = () => {
 
         <section className="border-b p-8">
           <h1 className="text-xl leading-tight font-semibold">
-            How We Got Here
-          </h1>
-          <section className="text-muted-foreground mt-2 text-lg">
-            <p>
-              <Link
-                href="https://writesonic.com"
-                target="_blank"
-                className="underline underline-offset-3"
-              >
-                WriteSonic
-              </Link>{" "}
-              announced their{" "}
-              <Link
-                href="https://writesonic.notion.site/The-AI-Visibility-Tracker-Engineering-Challenge-2d70db7b839280db9839ee30efaf306e"
-                target="_blank"
-                className="underline underline-offset-3"
-              >
-                AI Visibility Tracker challenge
-              </Link>{" "}
-              in January 2025, and I really liked the idea. So here we are
-              today.
-            </p>
-          </section>
-        </section>
-
-        <section className="border-b p-8">
-          <h1 className="text-xl leading-tight font-semibold">
             The New Reality of Discovery
           </h1>
 
@@ -355,39 +328,6 @@ const Ideology: React.FC = () => {
                     Understand sentiment and positioning
                   </p>
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-b p-8">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950">
-            <div className="flex items-start">
-              <svg
-                className="mt-1 mr-3 h-6 w-6 shrink-0 text-amber-600 dark:text-amber-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-              <div>
-                <h3 className="mb-2 text-lg font-semibold text-amber-900 dark:text-amber-100">
-                  Built During WriteSonic&apos;s AI Visibility Challenge
-                </h3>
-                <p className="text-amber-800 dark:text-amber-200">
-                  This project was developed as part of WriteSonic&apos;s
-                  engineering challenge in January 2025. The challenge asked:
-                  &#x22;When someone asks ChatGPT for product recommendations,
-                  which brands get mentioned?&#x22; We built GenSEO to answer
-                  that question not just for ourselves, but for every brand
-                  navigating the AI-first world.
-                </p>
               </div>
             </div>
           </div>

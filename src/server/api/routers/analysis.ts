@@ -1,12 +1,33 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { analysisSessions } from "~/server/db/schema/db.schema.analysis";
 import { prompts } from "~/server/db/schema/db.schema.prompts";
 import { searchFormSchema } from "~/zodSchema/analysis";
 import { processAnalysisSession } from "~/server/services/session-orchestration";
+import { analyzeWebsiteForBusiness } from "~/server/services/website-analyzer";
 import { eq, and, desc, count } from "drizzle-orm";
 
 export const analysisRouter = createTRPCRouter({
+  // Returns which features are available based on server env vars.
+  // Public so the UI can gate crawling options without requiring auth.
+  getCapabilities: publicProcedure.query(() => {
+    const chatgptEnabled = !!(
+      process.env.CHATGPT_EMAIL && process.env.CHATGPT_PASSWORD
+    );
+    const claudeCrawlEnabled = !!(
+      process.env.CLAUDE_EMAIL && process.env.CLAUDE_PASSWORD
+    );
+    return {
+      crawlingEnabled: chatgptEnabled || claudeCrawlEnabled,
+      chatgptCrawlEnabled: chatgptEnabled,
+      claudeCrawlEnabled: claudeCrawlEnabled,
+    };
+  }),
+
   // Create new analysis session
   create: protectedProcedure
     .input(searchFormSchema)
@@ -17,7 +38,10 @@ export const analysisRouter = createTRPCRouter({
       // FIX
       // hardcoded to 5 * input.selectedProviders.length for now
       // (costs to much API quota)
-      const totalPrompts = 5 * input.selectedProviders.length;
+      // totalPrompts = number of prompts (not prompt × providers).
+      // processAPIMethod now updates completedPrompts once per prompt so the
+      // progress bar shows 1/5, 2/5 … 5/5 in real time.
+      const totalPrompts = 5;
 
       // Create session
       const session = await ctx.db
@@ -31,6 +55,7 @@ export const analysisRouter = createTRPCRouter({
           selectedProviders: input.selectedProviders,
           // promptCount: input.promptCount,
           promptCount: 5,
+          analysisMethod: input.analysisMethod ?? "api_only",
           status: "pending",
           totalPrompts: totalPrompts,
         })
@@ -47,6 +72,7 @@ export const analysisRouter = createTRPCRouter({
         selectedProviders: input.selectedProviders,
         // promptCount: input.promptCount,
         promptCount: 5,
+        analysisMethod: input.analysisMethod ?? "api_only",
       }).catch((error) => {
         console.error(`Failed to process session ${sessionId}:`, error);
       });
@@ -343,5 +369,12 @@ export const analysisRouter = createTRPCRouter({
         .where(eq(analysisSessions.id, input.sessionId));
 
       return { success: true };
+    }),
+
+  // Analyze website to extract business info for pre-filling the form
+  analyzeWebsite: protectedProcedure
+    .input(z.object({ url: z.string().min(3) }))
+    .mutation(async ({ input }) => {
+      return await analyzeWebsiteForBusiness(input.url);
     }),
 });

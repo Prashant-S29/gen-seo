@@ -114,17 +114,6 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
           </section>
         </section>
 
-        <section className="border-b p-8">
-          <p className="text-muted-foreground">[ Note ]</p>
-          <p className="mt-1">
-            These results are generated based via API Only method and does not
-            represent the full analysis.
-          </p>
-          <p className="text-muted-foreground mt-3">
-            The web crawling feature is currently under development and will be
-            available soon.
-          </p>
-        </section>
         <section className="flex justify-between border-b p-8">
           <section>
             <h1 className="text-3xl font-bold">
@@ -134,6 +123,13 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({ sessionId }) => {
               {results.session.category} •&nbsp;
               {format(new Date(results.session.createdAt), "MMM d, yyyy")}
             </p>
+            <Badge variant="secondary" className="mt-2">
+              {results.session.analysisMethod === "both"
+                ? "API + Web Crawling"
+                : results.session.analysisMethod === "crawling_only"
+                  ? "Web Crawling Only"
+                  : "API Only"}
+            </Badge>
           </section>
           <section className="flex items-center gap-3">
             <Button variant="outline" onClick={handleExport}>

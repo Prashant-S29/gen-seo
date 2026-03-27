@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "~/components/ui/card";
@@ -18,19 +18,15 @@ export const ProcessingPage: React.FC<ProcessingPageProps> = ({
 }) => {
   const router = useRouter();
 
-  // Poll session status every 3 seconds
+  // Poll every 1 s while processing so the progress bar updates in real time.
+  // Stops automatically once the session reaches a terminal state.
   const { data: session, isLoading } = api.analysis.getSession.useQuery(
     { sessionId },
     {
       refetchInterval: (query) => {
-        // Stop polling if completed or failed
-        if (
-          query.state.data?.status === "completed" ||
-          query.state.data?.status === "failed"
-        ) {
-          return false;
-        }
-        return 3000; // Poll every 3 seconds
+        const status = query.state.data?.status;
+        if (status === "completed" || status === "failed") return false;
+        return 1000; // 1-second heartbeat while processing
       },
     },
   );
@@ -314,32 +310,88 @@ export const ProcessingPage: React.FC<ProcessingPageProps> = ({
               className={`${getStepStatus(5) === "loading" ? "border-primary dark:border-primary/70" : getStepStatus(5) === "completed" ? "border-border" : "border-primary/50"} w-full border-2 border-dashed p-2 transition-all`}
             >
               <section className="bg-card border">
+                {/* Header row — shows live pulse dot while running */}
                 <section className="flex items-center justify-between px-3 py-3">
-                  <p className="font-semibold">Dual Analysis</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold">Dual Analysis</p>
+                    {getStepStatus(5) === "loading" && (
+                      <span className="relative flex h-2 w-2">
+                        <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                        <span className="bg-primary relative inline-flex h-2 w-2 rounded-full" />
+                      </span>
+                    )}
+                  </div>
+                  {/* Live counter badge while running */}
+                  {getStepStatus(5) === "loading" &&
+                    session.totalPrompts > 0 && (
+                      <span className="text-primary text-xs font-semibold tabular-nums">
+                        {session.completedPrompts}&nbsp;/&nbsp;
+                        {session.totalPrompts} prompts
+                      </span>
+                    )}
                 </section>
+
                 <section
                   className={`overflow-hidden transition-all duration-500 ${
                     isStepExpanded(5) || getStepStatus(5) === "loading"
-                      ? "max-h-96"
+                      ? "max-h-[32rem]"
                       : "max-h-0"
                   }`}
                 >
-                  <section className="space-y-4 border-t px-3 pt-2 pb-3">
-                    <section className="flex items-center justify-between">
-                      <p className="text-muted-foreground">Progress</p>
-                      <p className="font-medium">
-                        {session.completedPrompts} / {session.totalPrompts}
-                      </p>
-                    </section>
-                    <div className="bg-secondary h-2 w-full overflow-hidden rounded-full">
-                      <div
-                        className="bg-primary h-full transition-all duration-500"
-                        style={{
-                          width: `${(session.completedPrompts / session.totalPrompts) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <section className="flex flex-wrap gap-2">
+                  <section className="space-y-3 border-t px-3 pt-3 pb-3">
+                    {/* Progress bar */}
+                    {session.totalPrompts > 0 && (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <p className="text-muted-foreground">
+                            {isCompleted
+                              ? "All prompts completed"
+                              : session.completedPrompts === 0
+                                ? "Starting analysis…"
+                                : `Analyzing prompt ${session.completedPrompts + 1} of ${session.totalPrompts}…`}
+                          </p>
+                          <p className="font-medium tabular-nums">
+                            {Math.round(
+                              (session.completedPrompts /
+                                session.totalPrompts) *
+                                100,
+                            )}
+                            %
+                          </p>
+                        </div>
+
+                        {/*<div className="bg-secondary h-2.5 w-full overflow-hidden rounded-full">
+                          <div
+                            className="bg-primary h-full rounded-full transition-all duration-700 ease-out"
+                            style={{
+                              width: `${(session.completedPrompts / session.totalPrompts) * 100}%`,
+                            }}
+                          />
+                        </div>*/}
+
+                        {/* Prompt tick marks */}
+                        <div className="flex gap-1">
+                          {Array.from({ length: session.totalPrompts }).map(
+                            (_, i) => (
+                              <div
+                                key={i}
+                                className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                                  i < session.completedPrompts
+                                    ? "bg-primary"
+                                    : i === session.completedPrompts &&
+                                        !isCompleted
+                                      ? "bg-primary/40 animate-pulse"
+                                      : "bg-secondary"
+                                }`}
+                              />
+                            ),
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Providers */}
+                    <section className="flex flex-wrap gap-2 pt-1">
                       {session.selectedProviders.map((provider) => (
                         <Badge key={provider} variant="secondary">
                           {provider}
@@ -347,15 +399,20 @@ export const ProcessingPage: React.FC<ProcessingPageProps> = ({
                       ))}
                     </section>
                   </section>
-                  <section className="space-y-2 border-t px-3 pt-2 pb-3">
-                    <p className="text-muted-foreground">Description</p>
-                    <p className="text-sm leading-snug">
-                      Running comprehensive analysis across{" "}
-                      {session.selectedProviders.length} AI platforms using{" "}
+
+                  <section className="space-y-1 border-t px-3 pt-2 pb-3">
+                    <p className="text-muted-foreground text-xs">
+                      Running across {session.selectedProviders.length} AI
+                      platform
+                      {session.selectedProviders.length !== 1
+                        ? "s"
+                        : ""} using{" "}
                       {session.analysisMethod === "both"
-                        ? "both API and web crawling methods"
-                        : session.analysisMethod}
-                      .
+                        ? "API + web crawling"
+                        : session.analysisMethod === "crawling_only"
+                          ? "web crawling"
+                          : "API"}{" "}
+                      · each prompt queries all providers in parallel.
                     </p>
                   </section>
                 </section>

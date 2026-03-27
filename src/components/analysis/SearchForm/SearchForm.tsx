@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, X, Check } from "lucide-react";
 
 import { api } from "~/trpc/react";
+import { cn } from "~/lib/utils";
 import { searchFormSchema, type SearchFormInput } from "~/zodSchema/analysis";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -23,7 +24,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
   FormDescription,
 } from "~/components/ui/form";
 import {
@@ -33,8 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { LLM_PROVIDERS, ANALYSIS_CONFIG } from "~/lib/constants";
-import { cn } from "~/lib/utils";
 
 const CATEGORIES = [
   "CRM Software",
@@ -63,8 +63,25 @@ export const SearchForm: React.FC = () => {
       category: "",
       selectedProviders: ["gpt-4-turbo"], // Default to GPT-4 Turbo
       promptCount: 5,
+      analysisMethod: "api_only" as const,
     },
   });
+
+  const analysisMethod = useWatch({
+    control: form.control,
+    name: "analysisMethod",
+  });
+
+  // ── Server capabilities ────────────────────────────────────────────────
+  const { data: capabilities } = api.analysis.getCapabilities.useQuery();
+  const crawlingEnabled = capabilities?.crawlingEnabled ?? false;
+
+  // If crawling env vars are not set, fall back to api_only silently
+  useEffect(() => {
+    if (capabilities && !crawlingEnabled && analysisMethod !== "api_only") {
+      form.setValue("analysisMethod", "api_only");
+    }
+  }, [capabilities, crawlingEnabled, analysisMethod, form]);
 
   const createAnalysis = api.analysis.create.useMutation({
     onSuccess: (data) => {
@@ -343,6 +360,43 @@ export const SearchForm: React.FC = () => {
                 </FormItem>
               )}
             />
+
+            {/* Analysis Method */}
+            <div className="space-y-2">
+              <FormLabel>Analysis Method</FormLabel>
+              <p className="text-muted-foreground text-sm">
+                Choose how to query AI platforms
+              </p>
+              <Tabs
+                value={analysisMethod ?? "api_only"}
+                onValueChange={(v) =>
+                  form.setValue(
+                    "analysisMethod",
+                    v as "api_only" | "crawling_only" | "both",
+                  )
+                }
+              >
+                <TabsList className={cn(!crawlingEnabled && "w-auto")}>
+                  <TabsTrigger value="api_only">API Only</TabsTrigger>
+                  {crawlingEnabled && (
+                    <>
+                      <TabsTrigger value="crawling_only">
+                        Web Crawling Only
+                      </TabsTrigger>
+                      <TabsTrigger value="both">Both</TabsTrigger>
+                    </>
+                  )}
+                </TabsList>
+              </Tabs>
+              {!crawlingEnabled && capabilities && (
+                <p className="text-muted-foreground text-xs">
+                  Web Crawling unavailable — set{" "}
+                  <code className="bg-muted rounded px-1">CHATGPT_EMAIL</code> /{" "}
+                  <code className="bg-muted rounded px-1">CLAUDE_EMAIL</code>{" "}
+                  env vars to enable.
+                </p>
+              )}
+            </div>
 
             {/* Number of Prompts with Number Input */}
             <FormField

@@ -2,6 +2,7 @@ import { pgTable, uuid, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { analysisSessions } from "./db.schema.analysis";
 import { mentions, citations } from "./db.schema.mentions";
+import { analysisMethodEnum } from "./db.schema.enums";
 
 export const promptTypeEnum = pgEnum("prompt_type", [
   "recommendation",
@@ -29,6 +30,9 @@ export const responses = pgTable("responses", {
   platform: text("platform").notNull(),
   model: text("model").notNull(),
   responseText: text("response_text").notNull(),
+  analysisMethod: analysisMethodEnum("analysis_method")
+    .default("api_only")
+    .notNull(),
   executionTimeMs: timestamp("execution_time_ms"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -22,6 +22,13 @@
       "when": 1767526762178,
       "tag": "0002_citation_added",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772407159561,
+      "tag": "0003_add_analysis_method_to_responses",
+      "breakpoints": true
     }
   ]
 }

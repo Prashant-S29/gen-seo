@@ -10,18 +10,13 @@ import {
 import { relations } from "drizzle-orm";
 import { user } from "./db.schema.user";
 import { prompts } from "./db.schema.prompts";
+import { analysisMethodEnum } from "./db.schema.enums";
 
 export const sessionStatusEnum = pgEnum("session_status", [
   "pending",
   "processing",
   "completed",
   "failed",
-]);
-
-export const analysisMethodEnum = pgEnum("analysis_method", [
-  "api_only",
-  "crawling_only",
-  "both",
 ]);
 
 export const analysisSessions = pgTable("analysis_sessions", {

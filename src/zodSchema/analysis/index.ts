@@ -47,6 +47,11 @@ export const searchFormSchema = z.object({
       ANALYSIS_CONFIG.prompts.max,
       `Maximum ${ANALYSIS_CONFIG.prompts.max} prompts`,
     ),
+
+  analysisMethod: z
+    .enum(["api_only", "crawling_only", "both"])
+    .default("api_only")
+    .optional(),
 });
 
 export type SearchFormInput = z.infer<typeof searchFormSchema>;
